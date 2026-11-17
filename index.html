@@ -3,30 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#1d4ed8" />
+    <meta name="theme-color" content="#7c3aed" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <title>Momentum · Physics AI Teacher</title>
-    <meta name="author" content="www.kitsorfan.com" />
+    <title>Momentum · Accelerating Education</title>
+    <meta name="author" content="Dr. Kontokostas George" />
     <meta
       name="description"
-      content="Interactive physics lessons in English and Greek. Lesson 1: momentum. Compare an empty and a loaded truck braking on the road."
+      content="Accelerating Education: interactive physics lessons in English and Greek by Dr. Kontokostas George. Lesson 1: momentum."
     />
     <link
       rel="icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='9' width='17' height='12' rx='1.5' fill='%23ea7317'/><path d='M20 12h6l4 5v4H20z' fill='%232563eb'/><circle cx='8' cy='23' r='3' fill='%23172033'/><circle cx='25' cy='23' r='3' fill='%23172033'/></svg>"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%237c3aed'/><path d='M9 10l7 6-7 6M16 10l7 6-7 6' fill='none' stroke='white' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/></svg>"
     />
   </head>
   <body>
     <header class="app-header">
       <div class="app-header-inner">
         <a class="brand" href="./">
-          <svg class="brand-mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
-            <rect x="2" y="9" width="17" height="12" rx="1.5" fill="#ea7317" />
-            <path d="M20 12h6l4 5v4H20z" fill="#2563eb" />
-            <circle cx="8" cy="23" r="3" fill="currentColor" />
-            <circle cx="25" cy="23" r="3" fill="currentColor" />
+          <svg class="brand-mark" viewBox="0 0 32 32" width="36" height="36" aria-hidden="true">
+            <defs>
+              <linearGradient id="brand-gradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#8b5cf6" />
+                <stop offset="1" stop-color="#6d28d9" />
+              </linearGradient>
+            </defs>
+            <rect width="32" height="32" rx="9" fill="url(#brand-gradient)" />
+            <path
+              d="M9 10l7 6-7 6M16 10l7 6-7 6"
+              fill="none"
+              stroke="#ffffff"
+              stroke-width="2.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
-          <span data-i18n="appName">Physics AI Teacher</span>
+          <span class="brand-text">
+            <span class="brand-name" data-i18n="appName">ACCELERATING EDUCATION</span>
+            <span class="brand-teacher" data-i18n="teacher">Dr. Kontokostas George</span>
+          </span>
         </a>
         <div class="lang-switch" role="group" aria-label="Language" data-i18n-label="language">
           <button type="button" data-lang="en" lang="en" aria-pressed="true">EN</button>
@@ -39,6 +53,11 @@
     </main>
     <footer class="app-footer">
       <p data-i18n="footer">Interactive physics lessons in English and Greek.</p>
+      <p class="credit">
+        <span data-i18n="credit">Software development by</span> Kitsos Orfanopoulos
+        (<a href="https://www.kitsorfan.com" target="_blank" rel="noopener">www.kitsorfan.com</a>)
+        <span class="version">· v.1.0</span>
+      </p>
     </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
