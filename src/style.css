@@ -1,0 +1,818 @@
+/* Physics AI Teacher: light theme by default (projector friendly), dark when the device asks for it. */
+:root {
+  color-scheme: light dark;
+  --bg: #f3f5fa;
+  --surface: #ffffff;
+  --surface-2: #f6f8fc;
+  --text: #172033;
+  --muted: #5b6577;
+  --border: #dde3ee;
+  --grid: #e8ecf3;
+  --accent: #1d4ed8;
+  --accent-ink: #ffffff;
+  --truck-a: #2563eb;
+  --truck-a-ink: #1d4ed8;
+  --truck-a-soft: #e7eefe;
+  --truck-a-line: #2563eb;
+  --truck-b: #ea7317;
+  --truck-b-ink: #b45309;
+  --truck-b-soft: #fdf0e3;
+  --truck-b-line: #ea7317;
+  --good: #15803d;
+  --good-soft: #e9f7ef;
+  --bad: #b91c1c;
+  --bad-soft: #fdeded;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgb(16 24 40 / 0.05), 0 6px 18px rgb(16 24 40 / 0.06);
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
+  --math: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', Cambria, Georgia, serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1220;
+    --surface: #151c2c;
+    --surface-2: #1b2437;
+    --text: #e6ebf5;
+    --muted: #a0abbf;
+    --border: #2a3550;
+    --grid: #253049;
+    --accent: #7aa5ff;
+    --accent-ink: #0b1020;
+    --truck-a-ink: #93b8ff;
+    --truck-a-soft: #1a2a4f;
+    --truck-a-line: #5f91ff;
+    --truck-b-ink: #ffb46b;
+    --truck-b-soft: #3b2715;
+    --truck-b-line: #ff9b3f;
+    --good: #4ade80;
+    --good-soft: #10301f;
+    --bad: #f87171;
+    --bad-soft: #3b1717;
+    --shadow: none;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- App shell ---------------------------------------------------------------------------- */
+
+.app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header-inner {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.lang-switch {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.lang-switch button {
+  min-width: 44px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lang-switch button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.app-footer {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 4px 16px 28px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.app-footer p {
+  margin: 0;
+}
+
+/* ---- Lesson layout ------------------------------------------------------------------------ */
+
+.lesson {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'intro' 'sim' 'controls' 'predict' 'results' 'theory';
+}
+
+.lesson-intro {
+  grid-area: intro;
+}
+.sim {
+  grid-area: sim;
+}
+.controls {
+  grid-area: controls;
+}
+.predict {
+  grid-area: predict;
+}
+.results {
+  grid-area: results;
+}
+.theory {
+  grid-area: theory;
+}
+
+/* Measurements and graph: stacked on small screens, side by side on wide ones. */
+.results {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 760px) {
+  .lesson {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'intro intro'
+      'sim sim'
+      'controls predict'
+      'results results'
+      'theory theory';
+  }
+}
+
+@media (min-width: 900px) {
+  .results {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* Wide screens: the setup on the left; the road, then the prediction right under the Run button. */
+@media (min-width: 1100px) {
+  .lesson {
+    grid-template-columns: 330px minmax(0, 1fr);
+    grid-template-areas:
+      'intro intro'
+      'controls sim'
+      'controls predict'
+      'results results'
+      'theory theory';
+  }
+
+  .controls {
+    align-self: stretch;
+  }
+
+  .theory .prose {
+    column-width: 30em;
+    column-gap: 40px;
+  }
+
+  .theory .prose h3 {
+    break-after: avoid;
+  }
+
+  .theory .prose p {
+    break-inside: avoid;
+  }
+}
+
+.lesson-intro {
+  padding: 2px 2px 0;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+}
+
+.lesson-intro h1 {
+  margin: 0 0 4px;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  line-height: 1.2;
+}
+
+.lede {
+  margin: 0;
+  max-width: 72ch;
+  color: var(--muted);
+  font-size: 1.02rem;
+}
+
+.card {
+  min-width: 0;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card h2 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.card-head h2 {
+  margin: 0;
+}
+
+/* ---- Simulation --------------------------------------------------------------------------- */
+
+.sim {
+  padding: 0;
+  overflow: hidden;
+}
+
+.canvas-wrap {
+  min-width: 0;
+}
+
+.canvas-wrap canvas {
+  display: block;
+  width: 100%;
+}
+
+.transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.btn {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  min-width: 9em;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.rate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.rate-label {
+  margin-right: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.chip {
+  min-height: 30px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--surface);
+}
+
+.clock {
+  min-width: 6.5em;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Controls ----------------------------------------------------------------------------- */
+
+.field {
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.field-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+  margin-bottom: 2px;
+}
+
+.field-head label,
+.friction legend {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.field-head output {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.field-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+input[type='range'] {
+  width: 100%;
+  height: 28px;
+  margin: 2px 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+input[type='range']:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.truck-a input[type='range'] {
+  accent-color: var(--truck-a);
+}
+.truck-b input[type='range'] {
+  /* The darker shade, so browsers keep the unfilled part of the track light. */
+  accent-color: var(--truck-b-ink);
+}
+.truck-a .field-head output {
+  color: var(--truck-a-ink);
+}
+.truck-b .field-head output {
+  color: var(--truck-b-ink);
+}
+
+.truck-a .field-head label::before,
+.truck-b .field-head label::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--truck-a);
+}
+
+.truck-b .field-head label::before {
+  background: var(--truck-b);
+}
+
+.friction legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 10px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.segmented label {
+  position: relative;
+}
+
+/* The real radio sits invisibly on top of its label, so it stays keyboard and screen-reader friendly. */
+.segmented input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.segmented span,
+.segmented button {
+  display: block;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.segmented button {
+  cursor: pointer;
+}
+
+.segmented input:checked + span,
+.segmented button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.14);
+}
+
+.segmented input:focus-visible + span {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.segmented input:disabled,
+.segmented input:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.segmented.compact {
+  margin: 0;
+}
+
+.shortcuts {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+@media (hover: none) {
+  .shortcuts {
+    display: none;
+  }
+}
+
+/* ---- Prediction --------------------------------------------------------------------------- */
+
+.question {
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  flex: 1 1 7.5em;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.choice[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.choice-a[aria-pressed='true'] {
+  border-color: var(--truck-a);
+  background: var(--truck-a-soft);
+}
+
+.choice-b[aria-pressed='true'] {
+  border-color: var(--truck-b);
+  background: var(--truck-b-soft);
+}
+
+.choice:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.choice:disabled[aria-pressed='true'] {
+  opacity: 1;
+}
+
+.hint {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.result {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.result[data-verdict='right'] {
+  border-color: var(--good);
+  background: var(--good-soft);
+}
+
+.result[data-verdict='wrong'] {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+}
+
+.verdict {
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.result[data-verdict='right'] .verdict {
+  color: var(--good);
+}
+
+.result[data-verdict='wrong'] .verdict {
+  color: var(--bad);
+}
+
+.explain {
+  margin: 0 0 6px;
+}
+
+.tip {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* ---- Measurements ------------------------------------------------------------------------- */
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.readouts {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.readouts th,
+.readouts td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.readouts th[scope='row'] {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: normal;
+}
+
+.readouts thead th {
+  font-weight: 700;
+}
+
+.readouts .col-a {
+  color: var(--truck-a-ink);
+}
+
+.readouts .col-b {
+  color: var(--truck-b-ink);
+}
+
+.row-momentum th,
+.row-momentum td {
+  background: var(--surface-2);
+}
+
+.row-momentum td {
+  font-weight: 700;
+}
+
+/* On a phone, let values wrap before their unit instead of pushing the table off screen. */
+@media (max-width: 480px) {
+  .readouts {
+    font-size: 0.85rem;
+  }
+
+  .readouts th,
+  .readouts td {
+    padding: 5px 4px;
+  }
+
+  .readouts td {
+    white-space: normal;
+  }
+}
+
+.bars {
+  margin-top: 14px;
+}
+
+.bars-title {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 7em minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.bar-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.bar-a .bar-label {
+  color: var(--truck-a-ink);
+}
+
+.bar-b .bar-label {
+  color: var(--truck-b-ink);
+}
+
+.bar-track {
+  height: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-2);
+}
+
+.bar-fill {
+  width: 0;
+  height: 100%;
+  border-radius: 7px;
+}
+
+.bar-a .bar-fill {
+  background: var(--truck-a);
+}
+
+.bar-b .bar-fill {
+  background: var(--truck-b);
+}
+
+.ratio {
+  margin: 10px 0 6px;
+  font-weight: 600;
+}
+
+.formula-line {
+  margin: 2px 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.formula-line strong {
+  color: var(--text);
+}
+
+/* ---- Graph and theory --------------------------------------------------------------------- */
+
+.caption {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.prose h3 {
+  margin: 18px 0 6px;
+  font-size: 1rem;
+}
+
+.prose h3:first-child {
+  margin-top: 0;
+}
+
+.prose p {
+  max-width: 78ch;
+  margin: 0 0 8px;
+}
+
+.formula {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-family: var(--math);
+  font-style: italic;
+  white-space: nowrap;
+}
