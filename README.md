@@ -2,6 +2,8 @@
 
 Interactive physics lessons by **Dr. Kontokostas George**, in **English and Greek**. They run in the browser with nothing to install: a static TypeScript site published on GitHub Pages.
 
+**Open it:** <https://kitsorfan.github.io/AcceleratingEducation/>
+
 The pages are kept short on purpose. The teacher explains, and the page shows the experiment, the numbers and the formulas.
 
 ## Lesson 1: Momentum (Ορμή)
@@ -90,8 +92,8 @@ To add a lesson, create a folder under `src/lessons/` with the same parts, and m
 
 The build uses relative asset paths (`base: './'`), so it works from `https://<user>.github.io/<repo>/`. The workflow in `.github/workflows/ci.yml` runs lint, tests and the build on every push and pull request, and deploys `main` when everything passes.
 
-1. Create a public GitHub repository (for example `PhysicsAITeacher`) and push this project to its `main` branch.
+1. Create the public GitHub repository `AcceleratingEducation` and push this project to its `main` branch.
 2. In the repository, go to **Settings > Pages > Build and deployment** and set **Source** to **GitHub Actions**.
-3. Push to `main`. The site goes live at `https://<user>.github.io/PhysicsAITeacher/`.
+3. Push to `main`. The site goes live at <https://kitsorfan.github.io/AcceleratingEducation/>.
 
 Software development by Kitsos Orfanopoulos ([www.kitsorfan.com](https://www.kitsorfan.com)).

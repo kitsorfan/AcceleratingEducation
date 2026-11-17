@@ -1,8 +1,8 @@
 {
-  "name": "physics-ai-teacher",
+  "name": "accelerating-education",
   "private": true,
   "version": "0.1.0",
-  "description": "Interactive physics lessons in English and Greek. Lesson 1: momentum, with an empty and a loaded truck.",
+  "description": "Accelerating Education: interactive physics lessons in English and Greek by Dr. Kontokostas George. Lesson 1: momentum.",
   "author": "www.kitsorfan.com",
   "type": "module",
   "engines": {
