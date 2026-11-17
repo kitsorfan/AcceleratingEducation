@@ -8,9 +8,9 @@ The pages are kept short on purpose. The teacher explains, and the page shows th
 
 ## Lesson 1: Momentum (Ορμή)
 
-Two trucks drive side by side at the same speed. One is empty and the other is loaded. Which one is harder to stop?
+Two trucks drive side by side, at the same speed to begin with. One is empty and the other is loaded. Which one is harder to stop?
 
-![Simulation step: two trucks at the start line with their momentum arrows, and four sliders](docs/screenshots/simulation.png)
+![Simulation step on a laptop screen: two trucks at the start line with their momentum arrows, and each truck's sliders beside the road](docs/screenshots/simulation.png)
 
 A stepper at the top (**Simulation · Graph · Calculations · Challenge**) moves between the steps at any time. It stays on screen while scrolling, and the address remembers the step (`#step-2`), so a link can open a specific step.
 
@@ -18,6 +18,8 @@ A stepper at the top (**Simulation · Graph · Calculations · Challenge**) move
 2. **Graph:** the same road, plus a table (m, v, p, distance, time to stop), the p–t graph, and the comparison as formulas, e.g. `pB = 5 × pA`, `tB = 5 × tA`, `xB = 5 × xA`.
 3. **Calculations:** p = m·v and F·Δt = Δp ⇒ Δt = p / F, worked out with the numbers from the simulation.
 4. **Challenge:** the same road, where friction is μ·m·g. Students predict which truck needs more road, then run it. With the trucks from the simulation at the same speed (the default), both stop together, because a = μ·g for both. **New problem** deals new trucks with different masses and speeds, so the answer can be either truck or the same distance: only the speed decides it (x = v² / 2μg).
+
+The page uses the whole screen. On a laptop (e.g. 15.6", Full HD at 125%) the sliders and the challenge's answers sit beside the road, so the road, its buttons and the panel fit without scrolling. Taller screens keep the panel under the road, and phones stack everything.
 
 ![Graph step after a run: truck A stopped at 22.5 m after 3 s, truck B at 112.5 m after 15 s](docs/screenshots/graph.png)
 
@@ -27,11 +29,13 @@ Long runs (very low friction) play faster, so a run never takes much more than 2
 
 The Greek version follows the school textbook conventions: υ for velocity, T for friction, α for acceleration, Α / Β for the trucks, and decimal commas.
 
-![Challenge step in Greek: both trucks stopped together at 38,2 m](docs/screenshots/challenge-el.png)
+![Challenge step in Greek on a laptop screen: both trucks stopped together at 38,2 m, and the answer marked correct](docs/screenshots/challenge-el.png)
 
-### Language
+### Language and theme
 
 The **EN / ΕΛ** switch is in the top right corner, and the browser remembers the choice. A link can set the language too: add `?lang=el` or `?lang=en`. Otherwise the page follows the browser's language.
+
+The moon / sun button next to it switches between the light and dark themes. Until someone picks one, the page follows the device's setting; a choice is remembered too.
 
 ## Development
 
@@ -57,16 +61,17 @@ The end-to-end tests use Playwright's Chromium. Install it once with `npx playwr
 
 ### Testing
 
-- **Unit tests** (`src/**/*.test.ts`) cover the physics: p = m·v, the impulse-momentum theorem, stopping times and distances with the same force and on the same road, no friction, and trucks at rest. They also cover the camera, the graph line, playback speed-up, step links, number formatting per language, and language detection. Another test keeps the English and Greek text in sync: same keys, same `{placeholders}`, and every key used in the markup defined.
-- **End-to-end tests** (`e2e/`) build the site and use it in a real browser. They check that it loads cleanly with no third-party requests and ships a strict CSP. They also test the four steps and the stepper, a run that continues across steps, pause and reset, no friction, the challenge, and Greek. On a phone, they check that every step fits the screen and that the stepper stays in reach.
+- **Unit tests** (`src/**/*.test.ts`) cover the physics: p = m·v, the impulse-momentum theorem, stopping times and distances with the same force and on the same road, trucks at different speeds, no friction, and trucks at rest. They also cover the camera, the graph line, playback speed-up and fast forward, step links, number formatting per language, language detection, and the theme choice (with a check that the CSS's two dark colour lists match). Another test keeps the English and Greek text in sync: same keys, same `{placeholders}`, and every key used in the markup defined.
+- **End-to-end tests** (`e2e/`) build the site and use it in a real browser. They check that it loads cleanly with no third-party requests and ships a strict CSP. They also test the four steps and the stepper, a run that continues across steps, pause and reset, fast forward, each truck's own speed, no friction, the challenge, and Greek. On a 15.6" laptop screen they check that the simulation and the challenge fit without scrolling, even with the longest result shown. On a phone, they check that every step fits the screen and that the stepper stays in reach.
 
 ### Project structure
 
 ```text
 src/
-  main.ts                  entry point: language switch, mounts the lesson
+  main.ts                  entry point: language and theme switches, mounts the lesson
   app-strings.ts           header and footer text (EN / EL)
-  style.css                theme and layout (light by default, dark when the device asks)
+  theme.ts                 light / dark theme: follows the device until someone picks one
+  style.css                colours (light and dark) and layout (phone, laptop, large screen)
   i18n/i18n.ts             language detection and switching, translations, number formatting
   lib/nice.ts              round numbers for axes and rulers
   lessons/momentum/
@@ -86,7 +91,7 @@ To add a lesson, create a folder under `src/lessons/` with the same parts, and m
 
 - **No third parties:** no analytics, trackers, cookies, CDNs or web fonts. Text uses the device's system font, which covers Greek. An end-to-end test enforces this.
 - **Strict Content-Security-Policy** in the production build: `default-src 'self'`, no inline scripts or styles, no `eval`, no plugins, no forms.
-- **Stored data:** only the language choice, in the browser's own `localStorage`.
+- **Stored data:** only the language and theme choices, in the browser's own `localStorage`.
 
 ## Deploy to GitHub Pages
 
