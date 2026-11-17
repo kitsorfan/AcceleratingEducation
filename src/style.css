@@ -35,6 +35,9 @@
   --shadow: 0 1px 3px rgb(15 23 42 / 0.05), 0 10px 30px -12px rgb(15 23 42 / 0.12);
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
   --math: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', Cambria, Georgia, serif;
+  /* Layout: the page grows with the screen up to a full HD width; margins grow with it. */
+  --page-max: 1920px;
+  --gutter: clamp(16px, 2.5vw, 40px);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -86,9 +89,13 @@ html {
   text-size-adjust: 100%;
 }
 
+/* Header, lesson, footer: the lesson takes the spare height, so the footer sits at the bottom of the screen. */
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   font-family: var(--font);
   line-height: 1.5;
   color: var(--text);
@@ -135,9 +142,9 @@ body {
 /* ---- App shell ---------------------------------------------------------------------------- */
 
 .app-header-inner {
-  max-width: 1100px;
+  max-width: var(--page-max);
   margin: 0 auto;
-  padding: 14px 16px 6px;
+  padding: 14px var(--gutter) 6px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -222,10 +229,13 @@ body {
   box-shadow: 0 2px 8px -2px var(--accent-glow);
 }
 
+#app {
+  flex: 1 0 auto;
+}
+
+/* Full width, so the credit lands in the bottom-right corner of the screen. */
 .app-footer {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 4px 16px 28px;
+  padding: 4px var(--gutter) 16px;
   color: var(--muted);
   font-size: 0.85rem;
   display: flex;
@@ -254,12 +264,24 @@ body {
 /* ---- Lesson layout and stepper ------------------------------------------------------------ */
 
 .lesson {
-  max-width: 1100px;
+  max-width: var(--page-max);
   margin: 0 auto;
-  padding: 0 16px 16px;
+  padding: 0 var(--gutter) 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Panels lay themselves out by their own width: two columns of sliders, results or formulas when there is room. */
+.step-panel {
+  min-width: 0;
+  container-type: inline-size;
+}
+
+@media (max-width: 480px) {
+  .lesson {
+    gap: 12px;
+  }
 }
 
 /* Always in reach: the stepper sticks to the top while the page scrolls. */
@@ -267,8 +289,8 @@ body {
   position: sticky;
   top: 0;
   z-index: 20;
-  margin: 0 -16px;
-  padding: 8px 16px 10px;
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 8px var(--gutter) 10px;
   background: var(--nav-bg);
   -webkit-backdrop-filter: saturate(1.4) blur(10px);
   backdrop-filter: saturate(1.4) blur(10px);
@@ -501,6 +523,57 @@ body {
   }
 }
 
+/* Small phones: tighter buttons, so Run, Reset and the clock share one row. */
+@media (max-width: 420px) {
+  .transport {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .transport .btn {
+    padding: 0 14px;
+  }
+
+  .transport .clock {
+    padding: 6px 10px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+}
+
+/* Phones held sideways: little height, so the header and step titles make way for the road. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .app-header-inner {
+    padding-top: 6px;
+    padding-bottom: 0;
+  }
+
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+  }
+
+  .eyebrow {
+    display: none;
+  }
+
+  .lesson {
+    gap: 10px;
+  }
+
+  .lesson-nav {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .step-head h1 {
+    margin-top: 0;
+    font-size: 1.2rem;
+  }
+}
+
 .btn-run[data-state='running'] {
   background: var(--text);
   box-shadow: var(--shadow-sm);
@@ -555,7 +628,7 @@ body {
   grid-template-columns: minmax(0, 1fr);
 }
 
-@media (min-width: 640px) {
+@container (min-width: 560px) {
   .controls {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -706,7 +779,7 @@ input[type='range']:disabled {
   grid-template-columns: minmax(0, 1fr);
 }
 
-@media (min-width: 900px) {
+@container (min-width: 820px) {
   .results {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -799,7 +872,7 @@ input[type='range']:disabled {
   grid-template-columns: minmax(0, 1fr);
 }
 
-@media (min-width: 760px) {
+@container (min-width: 700px) {
   .theory {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -844,7 +917,7 @@ input[type='range']:disabled {
   grid-template-columns: minmax(0, 1fr);
 }
 
-@media (min-width: 520px) {
+@container (min-width: 460px) {
   .choices {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

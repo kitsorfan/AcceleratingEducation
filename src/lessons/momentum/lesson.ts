@@ -27,7 +27,7 @@ import {
   type Setup,
   type Snapshot,
 } from './physics';
-import { drawScene, type SceneTruck } from './scene';
+import { drawScene, naturalSceneHeight, type SceneTruck } from './scene';
 import { STRINGS, type MomentumKey } from './strings';
 import { TEMPLATE } from './template';
 
@@ -44,6 +44,12 @@ const TRUCK_IDS: readonly TruckId[] = ['a', 'b'];
 const MAX_FRAME_STEP = 0.1;
 /** Runs longer than this (s) play faster, so a class never waits much longer than this. */
 const MAX_RUN_SECONDS = 20;
+/** Canvas heights (px): the road never gets shorter than this, nor taller than this share of the window. */
+const MIN_SCENE_HEIGHT = 220;
+const SCENE_SHARE = 0.6;
+const MIN_GRAPH_HEIGHT = 200;
+const MAX_GRAPH_HEIGHT = 400;
+const GRAPH_SHARE = 0.42;
 
 const COLORS: Record<TruckId, { color: string; ink: string }> = {
   a: { color: '#2563eb', ink: '#1d4ed8' },
@@ -212,6 +218,8 @@ export class MomentumLesson {
     const resize = new ResizeObserver(() => this.invalidate());
     resize.observe(els.sceneWrap);
     resize.observe(els.graphWrap);
+    // The canvases also follow the window height (a phone turned sideways), not just their width.
+    window.addEventListener('resize', () => this.invalidate());
     onLangChange(() => this.translate());
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
       this.graphTheme = readTheme();
@@ -396,7 +404,9 @@ export class MomentumLesson {
 
   private renderScene(snaps: Record<TruckId, Snapshot>): void {
     const width = this.els.sceneWrap.clientWidth;
-    const height = Math.round(clamp(width * 0.34, 240, 330));
+    // Tall enough to show the trucks at their natural size, short enough that the road and its buttons fit the window.
+    const maxHeight = Math.max(MIN_SCENE_HEIGHT, window.innerHeight * SCENE_SHARE);
+    const height = Math.round(clamp(naturalSceneHeight(width), MIN_SCENE_HEIGHT, maxHeight));
     const ctx = fitCanvas(this.els.scene, width, height);
     this.els.scene.dataset['state'] = this.state;
     if (!ctx) return;
@@ -461,7 +471,8 @@ export class MomentumLesson {
 
   private renderGraph(): void {
     const width = this.els.graphWrap.clientWidth;
-    const height = Math.round(clamp(width * 0.6, 200, 280));
+    const maxHeight = Math.max(MIN_GRAPH_HEIGHT, Math.min(MAX_GRAPH_HEIGHT, window.innerHeight * GRAPH_SHARE));
+    const height = Math.round(clamp(width * 0.6, MIN_GRAPH_HEIGHT, maxHeight));
     const ctx = fitCanvas(this.els.graph, width, height);
     if (!ctx) return;
     const series: GraphSeries[] = TRUCK_IDS.map((id) => ({

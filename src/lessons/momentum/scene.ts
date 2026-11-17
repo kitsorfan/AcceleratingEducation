@@ -83,13 +83,30 @@ export function crateCount(mass: number): number {
   return Math.round(load * CRATE_SLOTS);
 }
 
+/** Pixels per metre the road would like: about 60 m on a wide screen, at least 34 m on a phone. */
+function preferredScale(width: number): number {
+  return width / clamp(width / 14, 34, 64);
+}
+
+/** A strip's height besides the truck itself: the header, the road, the ruler and a margin. */
+const STRIP_CHROME = HEADER + 14 + RULER + ROAD * 0.42;
+/** Share of the sky the tallest load and its arrow fill at the natural height. */
+const SKY_FILL = 0.83;
+
+/**
+ * The canvas height (px) at which the trucks are drawn at their preferred scale with a little
+ * sky above. Shorter canvases still work: the road zooms out to make room.
+ */
+export function naturalSceneHeight(width: number): number {
+  const truck = ((LOAD_TOP + ARROW_LIFT) * preferredScale(width)) / SKY_FILL;
+  return 2 * Math.ceil(STRIP_CHROME + truck);
+}
+
 export function drawScene(ctx: CanvasRenderingContext2D, width: number, height: number, model: SceneModel): void {
   const stripHeight = Math.floor(height / 2);
-  const groundOffset = stripHeight - RULER - ROAD * 0.42;
-  // About 60 m of road on a wide screen, at least 34 m on a phone, and always room for the arrow.
-  const preferredScale = width / clamp(width / 14, 34, 64);
-  const heightScale = (groundOffset - HEADER - 14) / (LOAD_TOP + ARROW_LIFT);
-  const closest = Math.max(2, Math.min(preferredScale, heightScale));
+  // Always room for the load and its arrow: a short canvas shows more road instead.
+  const heightScale = (stripHeight - STRIP_CHROME) / (LOAD_TOP + ARROW_LIFT);
+  const closest = Math.max(2, Math.min(preferredScale(width), heightScale));
   const xs = model.trucks.map((truck) => truck.x);
   const road = frameRoad(Math.min(...xs), Math.max(...xs), width / closest);
   const view: View = { left: road.left, scale: width / road.meters, meters: road.meters, width };
