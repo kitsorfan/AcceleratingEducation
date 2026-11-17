@@ -1,7 +1,17 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { scene, setSlider, watchForProblems } from './helpers';
 
-test('loads cleanly and never contacts third parties', async ({ page, baseURL }) => {
+const step = (page: Page, n: number) => page.locator(`.step-tab[data-step="${n}"]`);
+const panel = (page: Page, n: number) => page.locator(`[data-panel="${n}"]`);
+
+/** A quick experiment: truck A stops after 1 s and 5 m, truck B after 2 s and 10 m. */
+async function quickSetup(page: Page): Promise<void> {
+  await setSlider(page.locator('#mass-b'), 10_000);
+  await setSlider(page.locator('#speed'), 10);
+  await setSlider(page.locator('#friction'), 50_000);
+}
+
+test('loads cleanly, branded, and never contacts third parties', async ({ page, baseURL }) => {
   const problems = watchForProblems(page);
   const thirdParty: string[] = [];
   page.on('request', (req) => {
@@ -10,8 +20,9 @@ test('loads cleanly and never contacts third parties', async ({ page, baseURL })
   });
 
   await page.goto('./');
-  await expect(page).toHaveTitle('Momentum · Physics AI Teacher');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Momentum');
+  await expect(page).toHaveTitle('Momentum · Accelerating Education');
+  await expect(page.locator('.brand-name')).toHaveText('ACCELERATING EDUCATION');
+  await expect(page.locator('.brand-teacher')).toHaveText('Dr. Kontokostas George');
   await expect(scene(page)).toHaveAttribute('data-state', 'ready');
   await page.waitForTimeout(500);
 
@@ -28,90 +39,99 @@ test('ships a strict Content-Security-Policy with no unsafe sources', async ({ p
   expect(csp).not.toContain('unsafe-');
 });
 
-test('shows the momentum of each truck before anything moves', async ({ page }) => {
+test('starts on the simulation: just the trucks and four sliders', async ({ page }) => {
   await page.goto('./');
-  await expect(page.locator('#a-momentum')).toHaveText('75,000 kg·m/s');
-  await expect(page.locator('#b-momentum')).toHaveText('375,000 kg·m/s');
-  await expect(page.locator('#ratio')).toHaveText('At the start, truck B has 5× the momentum of truck A.');
-
-  // Loading truck A up to the same mass makes the momenta equal.
-  await setSlider(page.locator('#mass-a'), 25_000);
-  await expect(page.locator('#a-momentum')).toHaveText('375,000 kg·m/s');
-  await expect(page.locator('#ratio')).toHaveText('Both trucks start with the same momentum.');
-  await expect(page.locator('#mass-a-note')).toHaveText('Truck 5,000 kg + cargo 20,000 kg');
+  await expect(step(page, 1)).toHaveAttribute('aria-current', 'step');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Which truck is harder to stop?');
+  await expect(scene(page)).toBeVisible();
+  await expect(panel(page, 1).locator('input[type="range"]')).toHaveCount(4);
+  await expect(page.locator('#mass-a-out')).toHaveText('5,000 kg');
+  await expect(page.locator('#mass-b-out')).toHaveText('25,000 kg');
+  await expect(page.locator('#speed-out')).toHaveText('15.0 m/s (54 km/h)');
+  await expect(page.locator('#friction-out')).toHaveText('25,000 N');
+  for (const n of [2, 3, 4]) await expect(panel(page, n)).toBeHidden();
+  await expect(page.getByRole('button', { name: /back|next/i })).toHaveCount(0);
 });
 
-test('a correct prediction with the same braking force: the loaded truck needs 5× the road', async ({ page }) => {
+test('the stepper moves freely between steps and remembers the step in the address', async ({ page }) => {
+  await page.goto('./');
+  await step(page, 3).click();
+  await expect(step(page, 3)).toHaveAttribute('aria-current', 'step');
+  await expect(page).toHaveURL(/#step-3$/);
+  await expect(scene(page)).toBeHidden();
+  await expect(page.locator('#calc-pb')).toHaveText('pB = 25,000 kg × 15.0 m/s = 375,000 kg·m/s');
+  await expect(page.locator('#calc-tb')).toHaveText('ΔtB = 375,000 / 25,000 = 15.0 s');
+
+  await step(page, 2).click();
+  await expect(panel(page, 2)).toBeVisible();
+  await expect(page.locator('#b-momentum')).toHaveText('375,000 kg·m/s');
+  await expect(page.locator('#ratios')).toHaveText('pB = 5 × pA');
+
+  await page.reload();
+  await expect(step(page, 2)).toHaveAttribute('aria-current', 'step');
+  await step(page, 1).click();
+  await expect(panel(page, 1)).toBeVisible();
+});
+
+test('a run started on the simulation keeps going on the graph step', async ({ page }) => {
   const problems = watchForProblems(page);
   await page.goto('./');
-  await page.getByRole('button', { name: 'Truck B' }).click();
-  await expect(page.getByRole('button', { name: 'Truck B' })).toHaveAttribute('aria-pressed', 'true');
-
-  await page.getByRole('button', { name: '▶ Run' }).click();
+  await quickSetup(page);
+  await page.locator('#run').click();
   await expect(scene(page)).toHaveAttribute('data-state', 'running');
-  await expect(page.getByRole('button', { name: 'Truck A' })).toBeDisabled();
   await expect(page.locator('#mass-a')).toBeDisabled();
 
-  await page.getByRole('button', { name: '⏭ Skip to end' }).click();
-  await expect(scene(page)).toHaveAttribute('data-state', 'finished');
-  await expect(page.locator('#a-stop')).toHaveText('3.0 s');
-  await expect(page.locator('#b-stop')).toHaveText('15.0 s');
-  await expect(page.locator('#a-distance')).toHaveText('22.5 m');
-  await expect(page.locator('#b-distance')).toHaveText('112.5 m');
-  await expect(page.locator('#b-momentum')).toHaveText('0 kg·m/s');
-  await expect(page.locator('#result')).toHaveAttribute('data-verdict', 'right');
-  await expect(page.locator('#verdict')).toHaveText('✓ Correct! You predicted: Truck B.');
-  await expect(page.locator('#explain')).toContainText('5× as long to lose it');
-  await expect(page.locator('#run')).toHaveText('▶ Run again');
+  await step(page, 2).click();
+  await expect(scene(page)).toHaveAttribute('data-state', 'finished', { timeout: 6000 });
+  await expect(page.locator('#a-stop')).toHaveText('1.0 s');
+  await expect(page.locator('#b-stop')).toHaveText('2.0 s');
+  await expect(page.locator('#a-distance')).toHaveText('5.0 m');
+  await expect(page.locator('#b-distance')).toHaveText('10.0 m');
+  await expect(page.locator('#ratios')).toContainText('tB = 2 × tA');
+  await expect(page.locator('#ratios')).toContainText('xB = 2 × xA');
+  await expect(page.locator('#run-label')).toHaveText('Run again');
   expect(problems).toEqual([]);
 });
 
-test('same road (μ): both trucks stop together, so "Truck B" is wrong', async ({ page }) => {
+test('pauses with the button and Space, and resets with R', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('radio', { name: 'Same road (μ)' }).check();
-  await expect(page.locator('#friction-out')).toHaveText('μ = 0.30');
-  await page.getByRole('button', { name: 'Truck B' }).click();
-  await page.getByRole('button', { name: '▶ Run' }).click();
-  await page.getByRole('button', { name: '⏭ Skip to end' }).click();
-
-  await expect(page.locator('#result')).toHaveAttribute('data-verdict', 'wrong');
-  await expect(page.locator('#verdict')).toHaveText('✗ Not quite. You predicted: Truck B. Answer: Same distance.');
-  await expect(page.locator('#a-distance')).toHaveText(await page.locator('#b-distance').innerText());
-  await expect(page.locator('#explain')).toContainText('a = μ·g = 2.94 m/s²');
-});
-
-test('without friction the trucks never stop and keep their momentum', async ({ page }) => {
-  await page.goto('./');
-  await setSlider(page.locator('#friction'), 0);
-  await expect(page.locator('#friction-note')).toHaveText('No friction at all: nothing slows the trucks down.');
-  await page.getByRole('button', { name: '▶ Run' }).click();
-  await page.getByRole('button', { name: '⏭ Skip to end' }).click();
-
-  await expect(page.locator('#verdict')).toHaveText('Neither truck stops!');
-  await expect(page.locator('#b-momentum')).toHaveText('375,000 kg·m/s');
-  await expect(page.locator('#b-stop')).toHaveText('never');
-});
-
-test('runs in real time, pauses with the button and Space, and resets with R', async ({ page }) => {
-  await page.goto('./');
-  await page.getByRole('button', { name: '×4' }).click();
-  await page.getByRole('button', { name: '▶ Run' }).click();
-  await page.waitForTimeout(700);
-  await page.getByRole('button', { name: '⏸ Pause' }).click();
+  await page.locator('#run').click();
+  await page.waitForTimeout(600);
+  await page.locator('#run').click();
   await expect(scene(page)).toHaveAttribute('data-state', 'paused');
-  const distance = Number.parseFloat(await page.locator('#b-distance').innerText());
-  expect(distance).toBeGreaterThan(5);
-
-  // While paused, nothing moves.
-  await page.waitForTimeout(300);
-  expect(Number.parseFloat(await page.locator('#b-distance').innerText())).toBe(distance);
+  await expect(page.locator('#run-label')).toHaveText('Continue');
 
   await page.locator('h1').click(); // move focus off the buttons, as a teacher would before using keys
   await page.keyboard.press('Space');
   await expect(scene(page)).toHaveAttribute('data-state', 'running');
   await page.keyboard.press('KeyR');
   await expect(scene(page)).toHaveAttribute('data-state', 'ready');
-  await expect(page.locator('#b-distance')).toHaveText('0.0 m');
+  await expect(page.locator('#clock')).toHaveText('t = 0.0 s');
+});
+
+test('without friction the calculations say the momentum cannot change', async ({ page }) => {
+  await page.goto('./');
+  await setSlider(page.locator('#friction'), 0);
+  await expect(page.locator('#friction-out')).toHaveText('0 N (none)');
+  await step(page, 3).click();
+  await expect(page.locator('#calc-ta')).toHaveText('F = 0  ⇒  Δp = 0');
+  await expect(page.locator('#calc-tb')).toBeHidden();
+});
+
+test('challenge: on the same road both trucks stop together', async ({ page }) => {
+  await page.goto('./');
+  await setSlider(page.locator('#speed'), 5); // a short run: about 1.7 s
+  await step(page, 4).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Same road');
+  await expect(page.locator('#step-lede')).toHaveText('f = μ·m·g (μ = 0.30)');
+
+  await page.getByRole('button', { name: 'Truck B' }).click();
+  await page.locator('#run').click();
+  await expect(page.getByRole('button', { name: 'Truck A' })).toBeDisabled();
+  await expect(scene(page)).toHaveAttribute('data-state', 'finished', { timeout: 6000 });
+  await expect(page.locator('#result')).toHaveAttribute('data-verdict', 'wrong');
+  await expect(page.locator('#verdict')).toHaveText('✗ Not quite. Answer: Same distance.');
+  await expect(page.locator('#explain')).toContainText('a = μ·g = 2.94 m/s²');
 });
 
 test('switches to Greek, with Greek numbers, and remembers the choice', async ({ page }) => {
@@ -119,26 +139,17 @@ test('switches to Greek, with Greek numbers, and remembers the choice', async ({
   await page.getByRole('button', { name: 'ΕΛ' }).click();
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'el');
-  await expect(page).toHaveTitle('Ορμή · Physics AI Teacher');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ορμή');
-  await expect(page.locator('#b-momentum')).toHaveText('375.000 kg·m/s');
+  await expect(page).toHaveTitle('Ορμή · Accelerating Education');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ποιο φορτηγό σταματά πιο δύσκολα;');
+  await expect(step(page, 1)).toContainText('Προσομοίωση');
+  await expect(page.locator('#mass-b-out')).toHaveText('25.000 kg');
   await expect(page.locator('#speed-out')).toHaveText('15,0 m/s (54 km/h)');
-  await expect(page.locator('#run')).toHaveText('▶ Εκκίνηση');
+  await expect(page.locator('#run-label')).toHaveText('Εκκίνηση');
 
   await page.reload();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ορμή');
+  await expect(page.locator('#run-label')).toHaveText('Εκκίνηση');
 
   // A link with ?lang= wins over the saved choice.
   await page.goto('./?lang=en');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Momentum');
-});
-
-test('explains the result in Greek', async ({ page }) => {
-  await page.goto('./?lang=el');
-  await page.getByRole('button', { name: 'Φορτηγό Β' }).click();
-  await page.getByRole('button', { name: '▶ Εκκίνηση' }).click();
-  await page.getByRole('button', { name: '⏭ Στο τέλος' }).click();
-  await expect(page.locator('#verdict')).toHaveText('✓ Σωστά! Πρόβλεψες: Φορτηγό Β.');
-  await expect(page.locator('#explain')).toContainText('Το φορτηγό Β ξεκίνησε με 5 φορές μεγαλύτερη ορμή από το φορτηγό Α');
-  await expect(page.locator('#b-distance')).toHaveText('112,5 m');
+  await expect(page.locator('#run-label')).toHaveText('Run');
 });

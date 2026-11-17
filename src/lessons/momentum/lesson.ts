@@ -1,21 +1,28 @@
 /**
- * Lesson 1: momentum. Two trucks start side by side at the same speed and brake; the student
- * sets the masses, the speed and the friction, predicts which truck needs more road to stop,
- * runs the experiment, and gets an explanation tailored to the setup.
+ * Lesson 1: momentum, in four steps.
+ *
+ * 1. Simulation: two trucks, four sliders (masses, speed, friction), Run.
+ * 2. Graph: the same road, plus the p–t graph and a table.
+ * 3. Calculations: p = m·v and F·Δt = Δp, with the numbers from the simulation.
+ * 4. Challenge: on the same road friction is μ·m·g; predict, then run. Shuffle deals another one.
+ *
+ * A stepper at the top lets the teacher jump between the steps at any time.
+ *
+ * The text stays minimal on purpose: the teacher explains, the page shows.
  */
 import { escapeHtml, formatNumber, onLangChange, translate, translateDom, type Params } from '../../i18n/i18n';
 import { clamp, niceCeil, ratioDigits } from '../../lib/nice';
+import { challengeFromSetup, planChallenge, shuffleChallenge, type Challenge } from './challenge';
 import { drawGraph, type GraphSeries, type GraphTheme } from './graph';
 import {
   DEFAULT_SETUP,
-  LIMITS,
   MS_TO_KMH,
   outcomeOf,
   planBoth,
   runDuration,
   snapshotAt,
-  type FrictionMode,
   type Motion,
+  type Outcome,
   type Plan,
   type Setup,
   type Snapshot,
@@ -25,27 +32,46 @@ import { STRINGS, type MomentumKey } from './strings';
 import { TEMPLATE } from './template';
 
 export type RunState = 'ready' | 'running' | 'paused' | 'finished';
+export type Step = 1 | 2 | 3 | 4;
 type TruckId = 'a' | 'b';
 type Prediction = TruckId | 'same';
-type GraphKind = 'p' | 'v';
 
+const STEPS: readonly Step[] = [1, 2, 3, 4];
+/** The step where friction is μ·m·g (same road) instead of the same force on both trucks. */
+const CHALLENGE: Step = 4;
 const TRUCK_IDS: readonly TruckId[] = ['a', 'b'];
 /** Longest real-time step per frame (s), so a hidden tab doesn't make the trucks jump. */
 const MAX_FRAME_STEP = 0.1;
+/** Runs longer than this (s) play faster, so a class never waits much longer than this. */
+const MAX_RUN_SECONDS = 20;
 
 const COLORS: Record<TruckId, { color: string; ink: string }> = {
   a: { color: '#2563eb', ink: '#1d4ed8' },
-  b: { color: '#ea7317', ink: '#b45309' },
+  b: { color: '#f97316', ink: '#c2410c' },
 };
 
 const t = (key: MomentumKey, params?: Params): string => translate(STRINGS, key, params);
 const num = (value: number, digits = 0): string => formatNumber(value, digits);
 const name = (id: TruckId): string => t(id === 'a' ? 'truckA' : 'truckB');
-const inline = (id: TruckId): string => t(id === 'a' ? 'truckAInline' : 'truckBInline');
+const sub = (id: TruckId): string => t(id === 'a' ? 'subA' : 'subB');
 const other = (id: TruckId): TruckId => (id === 'a' ? 'b' : 'a');
 const meters = (value: number): string => `${num(value, Number.isInteger(value) ? 0 : 1)} m`;
+const metersPerSecond = (value: number): string => `${num(value, Number.isInteger(value) ? 0 : 1)} m/s`;
 const seconds = (value: number): string => `${num(value, 1)} s`;
 const newtons = (value: number): string => `${num(value)} N`;
+/** A symbol with the truck's letter as subscript, e.g. p_A, as safe HTML. */
+const symbol = (letter: string, id: TruckId): string => `<i>${letter}</i><sub>${escapeHtml(sub(id))}</sub>`;
+
+/** How much faster than real time a run of this length plays (1 = real time). */
+export function playbackSpeed(duration: number): number {
+  return Math.max(1, Math.ceil(duration / MAX_RUN_SECONDS));
+}
+
+/** Reads the step from a URL hash like "#step-3". */
+export function stepFromHash(hash: string): Step {
+  const n = Number(/^#step-(\d)$/.exec(hash)?.[1]);
+  return STEPS.find((step) => step === n) ?? 1;
+}
 
 function query<T extends Element>(root: ParentNode, selector: string, type: { new (): T; prototype: T }): T {
   const found = root.querySelector(selector);
@@ -70,48 +96,49 @@ function setHtml(node: Element, html: string): void {
 }
 
 function lookup(root: HTMLElement) {
+  const cell = (id: string): HTMLTableCellElement => query(root, `#${id}`, HTMLTableCellElement);
   const truck = (id: TruckId) => ({
     mass: query(root, `#mass-${id}`, HTMLInputElement),
     massOut: query(root, `#mass-${id}-out`, HTMLOutputElement),
-    massNote: query(root, `#mass-${id}-note`, HTMLParagraphElement),
     cells: {
-      mass: query(root, `#${id}-mass`, HTMLTableCellElement),
-      speed: query(root, `#${id}-speed`, HTMLTableCellElement),
-      momentum: query(root, `#${id}-momentum`, HTMLTableCellElement),
-      friction: query(root, `#${id}-friction`, HTMLTableCellElement),
-      decel: query(root, `#${id}-decel`, HTMLTableCellElement),
-      distance: query(root, `#${id}-distance`, HTMLTableCellElement),
-      stop: query(root, `#${id}-stop`, HTMLTableCellElement),
+      mass: cell(`${id}-mass`),
+      speed: cell(`${id}-speed`),
+      momentum: cell(`${id}-momentum`),
+      distance: cell(`${id}-distance`),
+      stop: cell(`${id}-stop`),
     },
-    bar: query(root, `#bar-${id}`, HTMLDivElement),
-    formula: query(root, `#formula-${id}`, HTMLParagraphElement),
+    calcP: query(root, `#calc-p${id}`, HTMLParagraphElement),
+    calcT: query(root, `#calc-t${id}`, HTMLParagraphElement),
   });
   return {
+    steps: queryAll(root, '#steps > li', HTMLLIElement),
+    tabs: queryAll(root, '[data-step]', HTMLButtonElement),
+    head: query(root, '.step-head', HTMLElement),
+    panels: queryAll(root, '[data-panel]', HTMLElement),
+    title: query(root, '#step-title', HTMLHeadingElement),
+    lede: query(root, '#step-lede', HTMLParagraphElement),
+    sim: query(root, '#sim', HTMLElement),
     scene: query(root, '#scene', HTMLCanvasElement),
     sceneWrap: query(root, '#scene-wrap', HTMLDivElement),
     graph: query(root, '#graph', HTMLCanvasElement),
     graphWrap: query(root, '#graph-wrap', HTMLDivElement),
     run: query(root, '#run', HTMLButtonElement),
+    runLabel: query(root, '#run-label', HTMLSpanElement),
+    runIcon: query(root, '#run-icon', SVGUseElement),
     reset: query(root, '#reset', HTMLButtonElement),
-    skip: query(root, '#skip', HTMLButtonElement),
-    rates: queryAll(root, '[data-rate]', HTMLButtonElement),
+    shuffle: query(root, '#shuffle', HTMLButtonElement),
     clock: query(root, '#clock', HTMLOutputElement),
     speed: query(root, '#speed', HTMLInputElement),
     speedOut: query(root, '#speed-out', HTMLOutputElement),
-    modes: queryAll(root, 'input[name="friction-mode"]', HTMLInputElement),
     friction: query(root, '#friction', HTMLInputElement),
-    frictionLabel: query(root, '#friction-label', HTMLLabelElement),
     frictionOut: query(root, '#friction-out', HTMLOutputElement),
-    frictionNote: query(root, '#friction-note', HTMLParagraphElement),
+    ratios: query(root, '#ratios', HTMLDivElement),
+    lawMomentum: query(root, '#law-momentum', HTMLParagraphElement),
     predictions: queryAll(root, '[data-predict]', HTMLButtonElement),
     predictHint: query(root, '#predict-hint', HTMLParagraphElement),
     result: query(root, '#result', HTMLDivElement),
     verdict: query(root, '#verdict', HTMLParagraphElement),
     explain: query(root, '#explain', HTMLParagraphElement),
-    tip: query(root, '#tip', HTMLParagraphElement),
-    ratio: query(root, '#ratio', HTMLParagraphElement),
-    graphKinds: queryAll(root, '[data-graph]', HTMLButtonElement),
-    graphCaption: query(root, '#graph-caption', HTMLParagraphElement),
     trucks: { a: truck('a'), b: truck('b') },
   };
 }
@@ -119,14 +146,16 @@ function lookup(root: HTMLElement) {
 type Elements = ReturnType<typeof lookup>;
 
 export class MomentumLesson {
+  /** What the sliders set. The friction mode comes from the step (see `planForStep`). */
   private setup: Setup = { ...DEFAULT_SETUP };
-  private plan: Plan = planBoth(this.setup);
+  /** A challenge dealt by Shuffle; null while the challenge uses the trucks from the sliders. */
+  private shuffled: Challenge | null = null;
+  private step: Step = stepFromHash(location.hash);
+  private plan: Plan = this.planForStep();
   private state: RunState = 'ready';
   /** Simulated time since the start (s). */
   private time = 0;
-  private rate = 1;
   private prediction: Prediction | null = null;
-  private graphKind: GraphKind = 'p';
   private lastFrame: number | null = null;
   private frameRequested = false;
   private graphTheme: GraphTheme & Record<TruckId, string>;
@@ -136,9 +165,20 @@ export class MomentumLesson {
     root.innerHTML = TEMPLATE;
     this.els = lookup(root);
     this.graphTheme = readTheme();
-    this.syncInputs();
+    this.els.trucks.a.mass.value = String(this.setup.massA);
+    this.els.trucks.b.mass.value = String(this.setup.massB);
+    this.els.speed.value = String(this.setup.speed);
+    this.els.friction.value = String(this.setup.frictionForce);
     this.wire();
     this.translate();
+  }
+
+  private planForStep(): Plan {
+    return this.step === CHALLENGE ? planChallenge(this.challenge()) : planBoth({ ...this.setup, frictionMode: 'force' });
+  }
+
+  private challenge(): Challenge {
+    return this.shuffled ?? challengeFromSetup(this.setup);
   }
 
   private wire(): void {
@@ -150,27 +190,12 @@ export class MomentumLesson {
       );
     }
     els.speed.addEventListener('input', () => this.changeSetup({ speed: Number(els.speed.value) }));
-    for (const radio of els.modes) {
-      radio.addEventListener('change', () => {
-        if (!radio.checked) return;
-        this.changeSetup({ frictionMode: radio.value === 'coefficient' ? 'coefficient' : 'force' });
-        this.syncFrictionSlider();
-      });
-    }
-    els.friction.addEventListener('input', () => {
-      const value = Number(els.friction.value);
-      this.changeSetup(this.setup.frictionMode === 'force' ? { frictionForce: value } : { mu: value });
-    });
+    els.friction.addEventListener('input', () => this.changeSetup({ frictionForce: Number(els.friction.value) }));
 
     els.run.addEventListener('click', () => this.toggleRun());
     els.reset.addEventListener('click', () => this.reset());
-    els.skip.addEventListener('click', () => this.skipToEnd());
-    for (const button of els.rates) {
-      button.addEventListener('click', () => {
-        this.rate = Number(button.dataset['rate']) || 1;
-        this.invalidate();
-      });
-    }
+    els.shuffle.addEventListener('click', () => this.shuffle());
+    for (const tab of els.tabs) tab.addEventListener('click', () => this.goTo(stepFromHash(`#step-${tab.dataset['step']}`)));
     for (const button of els.predictions) {
       button.addEventListener('click', () => {
         if (this.state !== 'ready') return;
@@ -181,14 +206,9 @@ export class MomentumLesson {
         }
       });
     }
-    for (const button of els.graphKinds) {
-      button.addEventListener('click', () => {
-        this.graphKind = button.dataset['graph'] === 'v' ? 'v' : 'p';
-        this.invalidate();
-      });
-    }
 
     window.addEventListener('keydown', (event) => this.onKey(event));
+    window.addEventListener('hashchange', () => this.goTo(stepFromHash(location.hash)));
     const resize = new ResizeObserver(() => this.invalidate());
     resize.observe(els.sceneWrap);
     resize.observe(els.graphWrap);
@@ -200,7 +220,7 @@ export class MomentumLesson {
   }
 
   private onKey(event: KeyboardEvent): void {
-    if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+    if (event.ctrlKey || event.metaKey || event.altKey || event.repeat || this.step === 3) return;
     const tag = event.target instanceof HTMLElement ? event.target.tagName : '';
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (event.code === 'Space' && tag !== 'BUTTON') {
@@ -208,6 +228,8 @@ export class MomentumLesson {
       this.toggleRun();
     } else if (event.code === 'KeyR') {
       this.reset();
+    } else if (event.code === 'KeyS') {
+      this.shuffle();
     }
   }
 
@@ -219,37 +241,39 @@ export class MomentumLesson {
 
   // ---- State changes -------------------------------------------------------------------------
 
+  private goTo(step: Step): void {
+    if (step === this.step) return;
+    const modeChanges = (step === CHALLENGE) !== (this.step === CHALLENGE);
+    this.step = step;
+    if (modeChanges) {
+      // A different experiment (same force vs same road): start it from the start line.
+      this.plan = this.planForStep();
+      this.reset();
+    }
+    if (location.hash !== `#step-${step}`) history.replaceState(history.state, '', `#step-${step}`);
+    window.scrollTo({ top: 0 });
+    this.invalidate();
+  }
+
   private changeSetup(patch: Partial<Setup>): void {
     if (this.state === 'running') return;
     this.setup = { ...this.setup, ...patch };
-    this.plan = planBoth(this.setup);
-    // A new experiment: a finished or paused run no longer matches the setup.
+    this.shuffled = null; // the challenge follows the sliders again
+    this.plan = this.planForStep();
     if (this.state !== 'ready') this.reset();
     this.invalidate();
   }
 
   private toggleRun(): void {
-    switch (this.state) {
-      case 'ready':
-      case 'paused':
-        this.start();
-        break;
-      case 'running':
-        this.state = 'paused';
-        break;
-      case 'finished':
-        // Same experiment again: keep the setup and the prediction.
-        this.time = 0;
-        this.start();
-        break;
+    if (this.state === 'running') {
+      this.state = 'paused';
+    } else {
+      if (this.state === 'finished') this.time = 0; // run the same experiment again
+      this.lastFrame = null;
+      if (this.time >= runDuration(this.plan)) this.finish();
+      else this.state = 'running';
     }
     this.invalidate();
-  }
-
-  private start(): void {
-    this.lastFrame = null;
-    if (this.time >= runDuration(this.plan)) this.finish();
-    else this.state = 'running';
   }
 
   private finish(): void {
@@ -257,10 +281,12 @@ export class MomentumLesson {
     this.state = 'finished';
   }
 
-  private skipToEnd(): void {
-    if (this.state === 'finished') return;
-    this.finish();
-    this.invalidate();
+  /** A new challenge (other trucks, speeds and road), from the start line. */
+  private shuffle(): void {
+    if (this.step !== CHALLENGE) return;
+    this.shuffled = shuffleChallenge(this.challenge());
+    this.plan = this.planForStep();
+    this.reset();
   }
 
   /** Back to the start line, ready for a new prediction. */
@@ -285,7 +311,7 @@ export class MomentumLesson {
     if (this.state === 'running') {
       const duration = runDuration(this.plan);
       if (this.lastFrame !== null) {
-        const step = Math.min((now - this.lastFrame) / 1000, MAX_FRAME_STEP) * this.rate;
+        const step = Math.min((now - this.lastFrame) / 1000, MAX_FRAME_STEP) * playbackSpeed(duration);
         this.time = Math.min(this.time + step, duration);
       }
       this.lastFrame = now;
@@ -297,93 +323,116 @@ export class MomentumLesson {
 
   private render(): void {
     const snaps = { a: snapshotAt(this.plan.a, this.time), b: snapshotAt(this.plan.b, this.time) };
-    this.renderScene(snaps);
-    this.renderGraph();
-    this.renderReadouts(snaps);
+    this.renderStep();
+    this.renderTransport();
     this.renderControls();
-    this.renderPrediction();
+    if (this.step !== 3) this.renderScene(snaps);
+    if (this.step === 2) {
+      this.renderReadouts(snaps);
+      this.renderGraph();
+    }
+    if (this.step === 3) this.renderTheory();
+    if (this.step === CHALLENGE) this.renderChallenge();
   }
 
   // ---- Rendering -----------------------------------------------------------------------------
 
+  private renderStep(): void {
+    const { els, step } = this;
+    this.root.dataset['step'] = String(step);
+    for (const tab of els.tabs) {
+      if (tab.dataset['step'] === String(step)) tab.setAttribute('aria-current', 'step');
+      else tab.removeAttribute('aria-current');
+    }
+    // Steps before the current one are "done": their connector line is coloured in.
+    els.steps.forEach((item, i) => item.classList.toggle('done', i + 1 < step));
+    // The stepper already names the Graph and Calculations steps, so their heading is for screen readers only.
+    els.head.classList.toggle('visually-hidden', step === 2 || step === 3);
+    for (const panel of els.panels) panel.hidden = panel.dataset['panel'] !== String(step);
+    els.sim.hidden = step === 3;
+    const titles: Record<Step, MomentumKey> = { 1: 'step1Title', 2: 'step2Title', 3: 'step3Title', 4: 'step4Title' };
+    setText(els.title, t(titles[step]));
+    els.lede.hidden = step !== CHALLENGE;
+    els.shuffle.hidden = step !== CHALLENGE;
+    if (step === CHALLENGE) setText(els.lede, t('step4Lede', { mu: num(this.challenge().mu, 2) }));
+  }
+
+  private renderTransport(): void {
+    const { els, state } = this;
+    const runLabel: Record<RunState, MomentumKey> = {
+      ready: 'run',
+      running: 'pause',
+      paused: 'resume',
+      finished: 'runAgain',
+    };
+    setText(els.runLabel, t(runLabel[state]));
+    const icon = state === 'running' ? '#i-pause' : '#i-play';
+    if (els.runIcon.getAttribute('href') !== icon) els.runIcon.setAttribute('href', icon);
+    els.run.dataset['state'] = state;
+    const speed = playbackSpeed(runDuration(this.plan));
+    const time = num(this.time, 1);
+    setText(els.clock, speed > 1 ? t('clockFast', { t: time, k: speed }) : t('clock', { t: time }));
+  }
+
+  private renderControls(): void {
+    const { els, setup } = this;
+    // Changing the setup in the middle of a run would make it meaningless.
+    const locked = this.state === 'running';
+    for (const input of [els.trucks.a.mass, els.trucks.b.mass, els.speed, els.friction]) {
+      input.disabled = locked;
+      // How full the slider track is drawn (CSS reads --fill).
+      const min = Number(input.min);
+      const fill = ((Number(input.value) - min) / (Number(input.max) - min)) * 100;
+      input.style.setProperty('--fill', `${clamp(fill, 0, 100)}%`);
+    }
+    setText(els.trucks.a.massOut, t('massValue', { kg: num(setup.massA) }));
+    setText(els.trucks.b.massOut, t('massValue', { kg: num(setup.massB) }));
+    setText(els.speedOut, t('speedValue', { ms: num(setup.speed, 1), kmh: num(setup.speed * MS_TO_KMH) }));
+    setText(
+      els.frictionOut,
+      setup.frictionForce === 0 ? t('noFriction') : t('forceValue', { n: num(setup.frictionForce) }),
+    );
+  }
+
   private renderScene(snaps: Record<TruckId, Snapshot>): void {
     const width = this.els.sceneWrap.clientWidth;
-    const height = Math.round(clamp(width * 0.42, 300, 390));
+    const height = Math.round(clamp(width * 0.34, 240, 330));
     const ctx = fitCanvas(this.els.scene, width, height);
     this.els.scene.dataset['state'] = this.state;
     if (!ctx) return;
     const ran = this.state !== 'ready';
     const truck = (id: TruckId): SceneTruck => {
       const snap = snaps[id];
+      const motion = this.plan[id];
+      const title = [name(id), t('massValue', { kg: num(motion.mass) })];
+      // In the challenge the speeds can differ, so each truck shows its own.
+      if (this.step === CHALLENGE) title.push(metersPerSecond(motion.v0));
       return {
         ...COLORS[id],
-        mass: this.plan[id].mass,
+        mass: motion.mass,
         x: snap.x,
         p: snap.p,
-        title: `${name(id)} · ${t('massValue', { kg: num(this.plan[id].mass) })}`,
+        title: title.join(' · '),
         momentum: t('momentumLabel', { p: num(snap.p) }),
-        letter: t(id === 'a' ? 'subA' : 'subB'),
+        letter: sub(id),
         stopLabel: ran && snap.stopped ? meters(snap.x) : null,
-        behindLabel: `${t(id === 'a' ? 'subA' : 'subB')} · ${meters(snap.x)}`,
       };
     };
-    drawScene(ctx, width, height, {
-      trucks: [truck('a'), truck('b')],
-      startLabel: t('startLabel'),
-      overviewLabel: t('overviewLabel'),
-      meters,
-    });
-  }
-
-  private renderGraph(): void {
-    const width = this.els.graphWrap.clientWidth;
-    const height = Math.round(clamp(width * 0.62, 220, 300));
-    const ctx = fitCanvas(this.els.graph, width, height);
-    if (!ctx) return;
-    const kind = this.graphKind;
-    const peak = kind === 'p' ? Math.max(this.plan.a.p0, this.plan.b.p0) : this.setup.speed;
-    const series: GraphSeries[] = TRUCK_IDS.map((id) => ({
-      color: this.graphTheme[id],
-      points: trace(this.plan[id], this.time, kind),
-    }));
-    drawGraph(ctx, width, height, {
-      // A fixed time axis for the whole run, so the slopes keep their meaning as the lines grow.
-      xMax: niceCeil(Math.max(runDuration(this.plan), 0.5)),
-      yMax: niceCeil(Math.max(peak, kind === 'p' ? 1000 : 1)),
-      xLabel: t('axisT'),
-      yLabel: t(kind === 'p' ? 'axisP' : 'axisV'),
-      yUnit: kind === 'p' ? 1000 : 1,
-      series,
-      format: num,
-      theme: this.graphTheme,
-    });
+    drawScene(ctx, width, height, { trucks: [truck('a'), truck('b')], startLabel: t('startLabel'), meters });
   }
 
   private renderReadouts(snaps: Record<TruckId, Snapshot>): void {
-    const peak = Math.max(this.plan.a.p0, this.plan.b.p0);
     for (const id of TRUCK_IDS) {
       const motion = this.plan[id];
       const snap = snaps[id];
-      const { cells, bar, formula } = this.els.trucks[id];
+      const { cells } = this.els.trucks[id];
       setText(cells.mass, `${num(motion.mass)} kg`);
       setText(cells.speed, `${num(snap.v, 1)} m/s`);
       setText(cells.momentum, `${num(snap.p)} kg·m/s`);
-      setText(cells.friction, newtons(motion.friction));
-      setText(cells.decel, `${num(motion.decel, 2)} m/s²`);
       setText(cells.distance, `${num(snap.x, 1)} m`);
       setText(cells.stop, this.stopText(motion, snap));
-      bar.style.width = `${peak > 0 ? (snap.p / peak) * 100 : 0}%`;
-
-      // The definition with the starting numbers filled in.
-      const sub = escapeHtml(t(id === 'a' ? 'subA' : 'subB'));
-      setHtml(
-        formula,
-        `<i>p</i><sub>${sub}</sub> = <i>m</i><sub>${sub}</sub> · <i>${escapeHtml(t('vSym'))}</i> = ` +
-          `${escapeHtml(num(motion.mass))} kg × ${escapeHtml(num(motion.v0, 1))} m/s = ` +
-          `<strong>${escapeHtml(num(motion.p0))} kg·m/s</strong>`,
-      );
     }
-    setText(this.els.ratio, this.ratioText());
+    setHtml(this.els.ratios, this.ratiosHtml());
   }
 
   private stopText(motion: Motion, snap: Snapshot): string {
@@ -393,186 +442,146 @@ export class MomentumLesson {
     return t('stopPending');
   }
 
-  private ratioText(): string {
+  /** The comparison as formulas: p_B = 5 × p_A, then (once both stopped) the same for t and x. */
+  private ratiosHtml(): string {
     const { a, b } = this.plan;
-    if (a.p0 === 0 && b.p0 === 0) return t('ratioRest');
-    if (a.p0 === b.p0) return t('ratioEqual');
-    const heavy: TruckId = b.p0 > a.p0 ? 'b' : 'a';
-    const ratio = this.plan[heavy].p0 / this.plan[other(heavy)].p0;
-    return t('ratioMore', {
-      heavyInline: inline(heavy),
-      lightInline: inline(other(heavy)),
-      ratio: num(ratio, ratioDigits(ratio)),
+    if (a.p0 === 0 && b.p0 === 0) return `<p>${symbol('p', 'a')} = ${symbol('p', 'b')} = 0</p>`;
+    const compare = (letter: string, valueA: number, valueB: number): string => {
+      if (Math.abs(valueA - valueB) <= 1e-9 * Math.max(valueA, valueB)) return `<p>${symbol(letter, 'a')} = ${symbol(letter, 'b')}</p>`;
+      const big: TruckId = valueB > valueA ? 'b' : 'a';
+      const ratio = Math.max(valueA, valueB) / Math.min(valueA, valueB);
+      return `<p>${symbol(letter, big)} = ${escapeHtml(num(ratio, ratioDigits(ratio)))} × ${symbol(letter, other(big))}</p>`;
+    };
+    let html = compare('p', a.p0, b.p0);
+    if (this.state === 'finished' && Number.isFinite(a.stopTime) && Number.isFinite(b.stopTime)) {
+      html += compare('t', a.stopTime, b.stopTime) + compare('x', a.stopDistance, b.stopDistance);
+    }
+    return html;
+  }
+
+  private renderGraph(): void {
+    const width = this.els.graphWrap.clientWidth;
+    const height = Math.round(clamp(width * 0.6, 200, 280));
+    const ctx = fitCanvas(this.els.graph, width, height);
+    if (!ctx) return;
+    const series: GraphSeries[] = TRUCK_IDS.map((id) => ({
+      color: this.graphTheme[id],
+      points: trace(this.plan[id], this.time),
+    }));
+    drawGraph(ctx, width, height, {
+      // A fixed time axis for the whole run, so the slopes keep their meaning as the lines grow.
+      xMax: niceCeil(Math.max(runDuration(this.plan), 0.5)),
+      yMax: niceCeil(Math.max(this.plan.a.p0, this.plan.b.p0, 1000)),
+      xLabel: t('axisT'),
+      yLabel: t('axisP'),
+      yUnit: 1000,
+      series,
+      format: num,
+      theme: this.graphTheme,
     });
   }
 
-  private renderControls(): void {
-    const { els, setup, state } = this;
-    const runLabel: Record<RunState, MomentumKey> = {
-      ready: 'run',
-      running: 'pause',
-      paused: 'resume',
-      finished: 'runAgain',
-    };
-    setText(els.run, t(runLabel[state]));
-    els.skip.disabled = state === 'finished';
-    setText(els.clock, t('clock', { t: num(this.time, 1) }));
-    for (const button of els.rates) {
-      const rate = Number(button.dataset['rate']);
-      setText(button, `×${num(rate, Number.isInteger(rate) ? 0 : 1)}`);
-      button.setAttribute('aria-pressed', String(rate === this.rate));
-    }
-
-    // Changing the setup in the middle of a run would make it meaningless.
-    const locked = state === 'running';
-    for (const input of [els.trucks.a.mass, els.trucks.b.mass, els.speed, els.friction, ...els.modes]) {
-      input.disabled = locked;
-    }
-
+  /** The two laws, worked out with the numbers from the experiment. */
+  private renderTheory(): void {
+    const { els, plan, setup } = this;
+    const v = escapeHtml(t('vSym'));
+    setHtml(els.lawMomentum, `p = m · ${v}`);
     for (const id of TRUCK_IDS) {
-      const { massOut, massNote } = els.trucks[id];
-      const mass = this.plan[id].mass;
-      setText(massOut, t('massValue', { kg: num(mass) }));
-      const cargo = mass - LIMITS.mass.min;
-      setText(
-        massNote,
-        cargo > 0 ? t('loadNote', { empty: num(LIMITS.mass.min), cargo: num(cargo) }) : t('emptyNote'),
+      const motion = plan[id];
+      const { calcP, calcT } = els.trucks[id];
+      setHtml(
+        calcP,
+        `${symbol('p', id)} = ${escapeHtml(num(motion.mass))} kg × ${escapeHtml(num(motion.v0, 1))} m/s = ` +
+          `<strong>${escapeHtml(num(motion.p0))} kg·m/s</strong>`,
       );
+      if (setup.frictionForce === 0) {
+        // Without a force the momentum cannot change: say it once, as a formula.
+        calcT.hidden = id === 'b';
+        setHtml(calcT, 'F = 0 &nbsp;⇒&nbsp; Δp = 0');
+      } else {
+        calcT.hidden = false;
+        setHtml(
+          calcT,
+          `Δ${symbol('t', id)} = ${escapeHtml(num(motion.p0))} / ${escapeHtml(num(setup.frictionForce))} = ` +
+            `<strong>${escapeHtml(seconds(motion.stopTime))}</strong>`,
+        );
+      }
     }
-    setText(els.speedOut, t('speedValue', { ms: num(setup.speed, 1), kmh: num(setup.speed * MS_TO_KMH) }));
-
-    const byForce = setup.frictionMode === 'force';
-    setText(els.frictionLabel, t(byForce ? 'frictionForceLabel' : 'muLabel'));
-    setText(
-      els.frictionOut,
-      byForce ? t('forceValue', { n: num(setup.frictionForce) }) : t('muValue', { mu: num(setup.mu, 2) }),
-    );
-    const noFriction = byForce ? setup.frictionForce === 0 : setup.mu === 0;
-    setText(els.frictionNote, t(noFriction ? 'zeroFrictionNote' : byForce ? 'forceNote' : 'muNote'));
-
-    for (const button of els.graphKinds) {
-      button.setAttribute('aria-pressed', String(button.dataset['graph'] === this.graphKind));
-    }
-    setText(els.graphCaption, t(this.graphKind === 'p' ? 'captionP' : 'captionV'));
   }
 
-  private renderPrediction(): void {
+  private renderChallenge(): void {
     const { els, state, prediction } = this;
     for (const button of els.predictions) {
       button.setAttribute('aria-pressed', String(button.dataset['predict'] === prediction));
       button.disabled = state !== 'ready';
     }
-    const hint: MomentumKey | null =
-      state === 'ready' ? 'predictHintPick' : state === 'finished' ? null : prediction ? 'predictHintLocked' : 'predictHintNone';
-    els.predictHint.hidden = hint === null;
-    if (hint) setText(els.predictHint, t(hint));
-
+    els.predictHint.hidden = state !== 'ready';
     els.result.hidden = state !== 'finished';
     if (state !== 'finished') return;
-    const result = this.result();
+    const result = this.result(outcomeOf(this.plan));
     els.result.dataset['verdict'] = result.mood;
     setText(els.verdict, result.verdict);
+    els.verdict.hidden = result.verdict === '';
     setText(els.explain, result.explain);
-    setText(els.tip, result.tip);
-    els.tip.hidden = result.tip === '';
   }
 
-  /** The verdict on the prediction, and an explanation that fits this particular setup. */
-  private result(): { mood: 'right' | 'wrong' | 'neutral'; verdict: string; explain: string; tip: string } {
-    const { plan, setup, prediction } = this;
-    const outcome = outcomeOf(plan);
-    const answer = (choice: Prediction): string => (choice === 'same' ? t('predictSame') : name(choice));
-    const tip = t(
-      outcome === 'never-stop' || outcome === 'at-rest'
-        ? 'tipTryForce'
-        : setup.frictionMode === 'force'
-          ? 'tipTryMu'
-          : 'tipTryZero',
-    );
-
-    if (outcome === 'at-rest') return { mood: 'neutral', verdict: t('verdictAtRest'), explain: t('explainAtRest'), tip };
-    if (outcome === 'never-stop') {
-      const explain = `${t('explainFrictionless', { v: `${num(setup.speed, 1)} m/s` })} ${this.ratioText()}`;
-      return { mood: 'neutral', verdict: t('verdictNeverStop'), explain, tip };
+  /** The verdict on the prediction, and one line on why. */
+  private result(outcome: Outcome): { mood: 'right' | 'wrong' | 'neutral'; verdict: string; explain: string } {
+    const { plan, prediction } = this;
+    if (outcome === 'at-rest' || outcome === 'never-stop') {
+      return { mood: 'neutral', verdict: '', explain: outcome === 'at-rest' ? t('explainAtRest') : '' };
     }
-
+    const answer = outcome === 'same' ? t('predictSame') : name(outcome);
     let mood: 'right' | 'wrong' | 'neutral' = 'neutral';
-    let verdict = t('verdictNone', { answer: answer(outcome) });
+    let verdict = t('verdictNone', { answer });
     if (prediction === outcome) {
       mood = 'right';
-      verdict = t('verdictRight', { choice: answer(prediction) });
+      verdict = t('verdictRight');
     } else if (prediction !== null) {
       mood = 'wrong';
-      verdict = t('verdictWrong', { choice: answer(prediction), answer: answer(outcome) });
+      verdict = t('verdictWrong', { answer });
     }
 
+    if (plan.a.v0 !== plan.b.v0) {
+      // Same road, so the same deceleration: only the speed decides.
+      const fast: TruckId = plan.b.v0 > plan.a.v0 ? 'b' : 'a';
+      const f = plan[fast];
+      const s = plan[other(fast)];
+      const explain = t('explainSpeed', {
+        fast: name(fast),
+        vFast: metersPerSecond(f.v0),
+        vSlow: metersPerSecond(s.v0),
+        dFast: meters(round1(f.stopDistance)),
+        dSlow: meters(round1(s.stopDistance)),
+        a: `${num(f.decel, 2)} m/s²`,
+      });
+      return { mood, verdict, explain };
+    }
     if (plan.a.mass === plan.b.mass) {
-      const explain = t('explainSameMass', { t: seconds(plan.a.stopTime), d: meters(round1(plan.a.stopDistance)) });
-      return { mood, verdict, explain, tip };
+      return { mood, verdict, explain: t('explainSameMass', { d: meters(round1(plan.a.stopDistance)) }) };
     }
     const heavy: TruckId = plan.b.mass > plan.a.mass ? 'b' : 'a';
-    const light = other(heavy);
     const h = plan[heavy];
-    const l = plan[light];
+    const l = plan[other(heavy)];
     const ratio = h.p0 / l.p0;
-    const common = {
+    const explain = t('explainMu', {
       heavy: name(heavy),
-      heavyInline: inline(heavy),
-      lightInline: inline(light),
       ratio: num(ratio, ratioDigits(ratio)),
-    };
-    const explain =
-      outcome === 'same'
-        ? t('explainMu', {
-            ...common,
-            fHeavy: newtons(h.friction),
-            fLight: newtons(l.friction),
-            a: `${num(h.decel, 2)} m/s²`,
-            t: seconds(h.stopTime),
-            d: meters(round1(h.stopDistance)),
-          })
-        : t('explainForce', {
-            ...common,
-            f: newtons(h.friction),
-            tHeavy: seconds(h.stopTime),
-            tLight: seconds(l.stopTime),
-            dHeavy: meters(round1(h.stopDistance)),
-            dLight: meters(round1(l.stopDistance)),
-          });
-    return { mood, verdict, explain, tip };
-  }
-
-  // ---- Inputs --------------------------------------------------------------------------------
-
-  /** Puts the setup's values into the form controls. */
-  private syncInputs(): void {
-    const { els, setup } = this;
-    els.trucks.a.mass.value = String(setup.massA);
-    els.trucks.b.mass.value = String(setup.massB);
-    els.speed.value = String(setup.speed);
-    for (const radio of els.modes) radio.checked = radio.value === setup.frictionMode;
-    this.syncFrictionSlider();
-  }
-
-  /** The friction slider is a force in one mode and a coefficient in the other. */
-  private syncFrictionSlider(): void {
-    const { friction } = this.els;
-    const mode: FrictionMode = this.setup.frictionMode;
-    const range = mode === 'force' ? LIMITS.force : LIMITS.mu;
-    friction.min = String(range.min);
-    friction.max = String(range.max);
-    friction.step = String(range.step);
-    friction.value = String(mode === 'force' ? this.setup.frictionForce : this.setup.mu);
+      fHeavy: newtons(h.friction),
+      fLight: newtons(l.friction),
+      a: `${num(h.decel, 2)} m/s²`,
+      d: meters(round1(h.stopDistance)),
+    });
+    return { mood, verdict, explain };
   }
 }
 
-/** The part of a truck's p–t or v–t line up to `time`: a straight drop, then flat at zero. */
-export function trace(motion: Motion, time: number, kind: GraphKind): Array<readonly [number, number]> {
-  const value = (snap: Snapshot): number => (kind === 'p' ? snap.p : snap.v);
-  const points: Array<readonly [number, number]> = [[0, value(snapshotAt(motion, 0))]];
+/** The part of a truck's p–t line up to `time`: a straight drop, then flat at zero. */
+export function trace(motion: Motion, time: number): Array<readonly [number, number]> {
+  const points: Array<readonly [number, number]> = [[0, motion.p0]];
   if (time <= 0) return points;
   const bend = Math.min(time, motion.stopTime);
-  if (bend > 0) points.push([bend, value(snapshotAt(motion, bend))]);
+  if (bend > 0) points.push([bend, snapshotAt(motion, bend).p]);
   if (time > bend) points.push([time, 0]);
   return points;
 }

@@ -1,11 +1,11 @@
 /**
- * Draws the road scene: one strip per truck, sharing a camera so their positions line up,
- * plus an overview of the whole road underneath.
+ * Draws the road scene: one strip per truck, sharing a camera so their positions line up.
+ * The camera follows the leading truck and zooms out when needed, so both trucks stay in view.
  *
  * Distances are in metres along the road (0 = start line). Each truck's momentum arrow is drawn
  * to one fixed scale, so arrow lengths can be compared between trucks and between runs.
  */
-import { clamp, niceCeil, stepForPixels } from '../../lib/nice';
+import { clamp, stepForPixels } from '../../lib/nice';
 import { EMPTY_TRUCK_MASS, LIMITS } from './physics';
 
 export interface SceneTruck {
@@ -18,7 +18,7 @@ export interface SceneTruck {
   x: number;
   /** Momentum now (kg·m/s). */
   p: number;
-  /** Strip header on the left, e.g. "Truck A · 5,000 kg". */
+  /** Strip header on the left, e.g. "Truck A · 5,000 kg" (in the challenge also "· 15 m/s"). */
   title: string;
   /** Strip header on the right, e.g. "p = 75,000 kg·m/s". */
   momentum: string;
@@ -26,14 +26,11 @@ export interface SceneTruck {
   letter: string;
   /** Where it stopped, e.g. "22.5 m", once it has stopped in this run; otherwise null. */
   stopLabel: string | null;
-  /** Shown at the left edge when the truck has fallen behind the view, e.g. "A · 22.5 m". */
-  behindLabel: string;
 }
 
 export interface SceneModel {
   trucks: readonly [SceneTruck, SceneTruck];
   startLabel: string;
-  overviewLabel: string;
   /** Formats a distance, e.g. "10 m". */
   meters: (value: number) => string;
 }
@@ -52,7 +49,6 @@ const CRATE_SLOTS = 8; // two rows of four crates on a fully loaded truck
 const HEADER = 24;
 const ROAD = 26;
 const RULER = 18;
-export const OVERVIEW_HEIGHT = 50;
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif';
 
@@ -71,6 +67,16 @@ export function followCamera(leaderX: number, viewMeters: number): number {
   return Math.max(VIEW_START, leaderX - LEADER_AT * viewMeters);
 }
 
+/**
+ * The stretch of road to show (m): it follows the leading truck and, once the trucks drift
+ * apart, zooms out so the one behind stays in view too.
+ */
+export function frameRoad(minX: number, maxX: number, minMeters: number): { left: number; meters: number } {
+  const left = Math.min(followCamera(maxX, minMeters), minX - TRUCK_LENGTH - 3);
+  const right = Math.max(left + minMeters, maxX + (1 - LEADER_AT) * minMeters);
+  return { left, meters: right - left };
+}
+
 /** How many crates a truck of this mass carries (0 when empty, 8 when fully loaded). */
 export function crateCount(mass: number): number {
   const load = clamp((mass - EMPTY_TRUCK_MASS) / (LIMITS.mass.max - EMPTY_TRUCK_MASS), 0, 1);
@@ -78,21 +84,20 @@ export function crateCount(mass: number): number {
 }
 
 export function drawScene(ctx: CanvasRenderingContext2D, width: number, height: number, model: SceneModel): void {
-  const stripHeight = Math.floor((height - OVERVIEW_HEIGHT) / 2);
+  const stripHeight = Math.floor(height / 2);
   const groundOffset = stripHeight - RULER - ROAD * 0.42;
   // About 60 m of road on a wide screen, at least 34 m on a phone, and always room for the arrow.
   const preferredScale = width / clamp(width / 14, 34, 64);
   const heightScale = (groundOffset - HEADER - 14) / (LOAD_TOP + ARROW_LIFT);
-  const scale = Math.max(2, Math.min(preferredScale, heightScale));
-  const meters = width / scale;
-  const leader = Math.max(model.trucks[0].x, model.trucks[1].x);
-  const view: View = { left: followCamera(leader, meters), scale, meters, width };
+  const closest = Math.max(2, Math.min(preferredScale, heightScale));
+  const xs = model.trucks.map((truck) => truck.x);
+  const road = frameRoad(Math.min(...xs), Math.max(...xs), width / closest);
+  const view: View = { left: road.left, scale: width / road.meters, meters: road.meters, width };
 
   ctx.clearRect(0, 0, width, height);
   model.trucks.forEach((truck, i) => drawStrip(ctx, view, i * stripHeight, stripHeight, truck, model));
   ctx.fillStyle = '#c7d0dc';
   ctx.fillRect(0, stripHeight, width, 1);
-  drawOverview(ctx, view, stripHeight * 2, height - stripHeight * 2, model);
 }
 
 function drawStrip(
@@ -164,23 +169,26 @@ function drawStrip(
     pill(ctx, px + 4, roadTop - 24, truck.stopLabel, truck.ink);
   }
 
-  // Header: which truck, and its momentum right now.
+  // Header: which truck, and its momentum right now. The text shrinks to fit a narrow phone.
   ctx.fillStyle = 'rgb(255 255 255 / 0.78)';
   ctx.fillRect(0, top, width, HEADER);
   ctx.fillStyle = truck.color;
   ctx.fillRect(0, top, 5, HEADER);
   ctx.textBaseline = 'middle';
   ctx.font = `600 13px ${FONT}`;
+  const titleWidth = ctx.measureText(truck.title).width;
+  ctx.font = `700 13px ${FONT}`;
+  const momentumWidth = ctx.measureText(truck.momentum).width;
+  const size = clamp((13 * (width - 34)) / (titleWidth + momentumWidth), 9, 13);
+  ctx.font = `600 ${size}px ${FONT}`;
   ctx.fillStyle = '#172033';
   ctx.fillText(truck.title, 12, top + HEADER / 2 + 0.5);
   ctx.textAlign = 'right';
-  ctx.font = `700 13px ${FONT}`;
+  ctx.font = `700 ${size}px ${FONT}`;
   ctx.fillStyle = truck.ink;
   ctx.fillText(truck.momentum, width - 10, top + HEADER / 2 + 0.5);
   ctx.textAlign = 'left';
 
-  // A truck that has dropped out of view on the left still says where it is.
-  if (sx(truck.x) < 6) pill(ctx, 6, groundY - 2 * scale - 9, `◀ ${truck.behindLabel}`, truck.ink);
 
   ctx.restore();
 }
@@ -400,61 +408,6 @@ function drawArrow(ctx: CanvasRenderingContext2D, x: number, y: number, length: 
   ctx.closePath();
   ctx.stroke();
   ctx.fill();
-}
-
-function drawOverview(ctx: CanvasRenderingContext2D, view: View, top: number, height: number, model: SceneModel): void {
-  const { width } = view;
-  ctx.fillStyle = '#eef2f7';
-  ctx.fillRect(0, top, width, height);
-  ctx.fillStyle = '#c7d0dc';
-  ctx.fillRect(0, top, width, 1);
-
-  const pad = 14;
-  const left = pad;
-  const right = width - pad;
-  const extent = niceCeil(Math.max(40, model.trucks[0].x, model.trucks[1].x, view.left + view.meters) * 1.04);
-  const ox = (x: number): number => left + clamp(x / extent, 0, 1) * (right - left);
-
-  ctx.font = `600 11px ${FONT}`;
-  ctx.fillStyle = '#4b5567';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`${model.overviewLabel}: ${model.meters(0)}`, left, top + 11);
-  ctx.textAlign = 'right';
-  ctx.fillText(model.meters(extent), right, top + 11);
-  ctx.textAlign = 'left';
-
-  // The part of the road shown above.
-  const windowLeft = ox(Math.max(0, view.left));
-  const windowRight = ox(view.left + view.meters);
-  ctx.fillStyle = 'rgb(29 78 216 / 0.08)';
-  ctx.fillRect(windowLeft, top + 20, windowRight - windowLeft, 26);
-  ctx.strokeStyle = 'rgb(71 85 105 / 0.45)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(windowLeft + 0.5, top + 20.5, windowRight - windowLeft - 1, 25);
-
-  model.trucks.forEach((truck, i) => {
-    const y = top + 27 + i * 12;
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = '#c3ccd9';
-    ctx.beginPath();
-    ctx.moveTo(left, y);
-    ctx.lineTo(right, y);
-    ctx.stroke();
-    ctx.strokeStyle = truck.color;
-    ctx.beginPath();
-    ctx.moveTo(left, y);
-    ctx.lineTo(ox(truck.x), y);
-    ctx.stroke();
-    ctx.lineCap = 'butt';
-    ctx.fillStyle = truck.color;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(ox(truck.x), y, 5, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fill();
-  });
 }
 
 function pill(ctx: CanvasRenderingContext2D, x: number, y: number, text: string, background: string): void {

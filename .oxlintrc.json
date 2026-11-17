@@ -29,6 +29,12 @@
     {
       "files": ["e2e/**", "*.config.ts"],
       "env": { "node": true }
+    },
+    {
+      "files": ["e2e/**"],
+      "rules": {
+        "no-await-in-loop": "off"
+      }
     }
   ],
   "ignorePatterns": ["dist/**", "playwright-report/**", "test-results/**", "coverage/**"]
