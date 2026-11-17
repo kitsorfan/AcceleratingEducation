@@ -774,9 +774,45 @@ body {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* Each truck's own sliders (mass, initial speed), under its name. */
+.truck-group {
+  display: grid;
+  gap: 14px 24px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.truck-group legend {
+  display: flex;
+  align-items: center;
+  padding: 0 0 10px;
+  font-weight: 750;
+}
+
+.truck-group legend::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--truck-a);
+}
+
+.truck-b legend::before {
+  background: var(--truck-b);
+}
+
+/* Wider than a phone: one column per truck (mass, then speed), the shared friction across both. */
 @container (min-width: 560px) {
   .controls {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .field-wide {
+    grid-column: 1 / -1;
   }
 }
 
@@ -826,21 +862,6 @@ body {
   border-color: transparent;
   background: var(--truck-b-soft);
   color: var(--truck-b-ink);
-}
-
-.truck-a label::before,
-.truck-b label::before {
-  content: '';
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 8px;
-  border-radius: 50%;
-  background: var(--truck-a);
-}
-
-.truck-b label::before {
-  background: var(--truck-b);
 }
 
 /* A custom range slider: coloured fill up to the thumb (--fill is set by the lesson). */

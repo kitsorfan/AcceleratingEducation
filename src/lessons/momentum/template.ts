@@ -33,6 +33,14 @@ const slider = (
         <input type="range" id="${id}" min="${range.min}" max="${range.max}" step="${range.step}" />
       </div>`;
 
+/** One truck's own sliders (mass and initial speed), under its name, in its colour. */
+const truckGroup = (id: 'a' | 'b'): string => /* html */ `
+      <fieldset class="truck-group truck-${id}">
+        <legend data-i18n="${id === 'a' ? 'truckA' : 'truckB'}"></legend>
+${slider(`mass-${id}`, 'mass', LIMITS.mass)}
+${slider(`speed-${id}`, 'speed', LIMITS.speed)}
+      </fieldset>`;
+
 /**
  * Markup for the momentum lesson: a stepper, the road (shared by the steps that need it), one
  * panel per step, and Back / Next. It holds no text of its own: `data-i18n*` attributes are
@@ -75,10 +83,9 @@ ${ICONS}
 
   <section class="step-panel" data-panel="1">
     <div class="card controls">
-${slider('mass-a', 'massA', LIMITS.mass, 'truck-a')}
-${slider('mass-b', 'massB', LIMITS.mass, 'truck-b')}
-${slider('speed', 'speed', LIMITS.speed)}
-${slider('friction', 'friction', LIMITS.force, '', 'frictionNote')}
+${truckGroup('a')}
+${truckGroup('b')}
+${slider('friction', 'friction', LIMITS.force, 'field-wide', 'frictionNote')}
     </div>
   </section>
 

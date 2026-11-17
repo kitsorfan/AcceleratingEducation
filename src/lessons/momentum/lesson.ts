@@ -1,7 +1,7 @@
 /**
  * Lesson 1: momentum, in four steps.
  *
- * 1. Simulation: two trucks, four sliders (masses, speed, friction), Run.
+ * 1. Simulation: two trucks, five sliders (each truck's mass and speed, the shared friction), Run.
  * 2. Graph: the same road, plus the p–t graph and a table.
  * 3. Calculations: p = m·v and F·Δt = Δp, with the numbers from the simulation.
  * 4. Challenge: on the same road friction is μ·m·g; predict, then run. New problem deals another one.
@@ -109,6 +109,8 @@ function lookup(root: HTMLElement) {
   const truck = (id: TruckId) => ({
     mass: query(root, `#mass-${id}`, HTMLInputElement),
     massOut: query(root, `#mass-${id}-out`, HTMLOutputElement),
+    speed: query(root, `#speed-${id}`, HTMLInputElement),
+    speedOut: query(root, `#speed-${id}-out`, HTMLOutputElement),
     cells: {
       mass: cell(`${id}-mass`),
       speed: cell(`${id}-speed`),
@@ -139,8 +141,6 @@ function lookup(root: HTMLElement) {
     fastLabel: query(root, '#fast-label', HTMLSpanElement),
     newProblem: query(root, '#new-problem', HTMLButtonElement),
     clock: query(root, '#clock', HTMLOutputElement),
-    speed: query(root, '#speed', HTMLInputElement),
-    speedOut: query(root, '#speed-out', HTMLOutputElement),
     friction: query(root, '#friction', HTMLInputElement),
     frictionOut: query(root, '#friction-out', HTMLOutputElement),
     ratios: query(root, '#ratios', HTMLDivElement),
@@ -180,7 +180,8 @@ export class MomentumLesson {
     this.graphTheme = readTheme();
     this.els.trucks.a.mass.value = String(this.setup.massA);
     this.els.trucks.b.mass.value = String(this.setup.massB);
-    this.els.speed.value = String(this.setup.speed);
+    this.els.trucks.a.speed.value = String(this.setup.speedA);
+    this.els.trucks.b.speed.value = String(this.setup.speedB);
     this.els.friction.value = String(this.setup.frictionForce);
     this.wire();
     this.translate();
@@ -197,12 +198,14 @@ export class MomentumLesson {
   private wire(): void {
     const { els } = this;
     for (const id of TRUCK_IDS) {
-      const input = els.trucks[id].mass;
-      input.addEventListener('input', () =>
-        this.changeSetup(id === 'a' ? { massA: Number(input.value) } : { massB: Number(input.value) }),
+      const { mass, speed } = els.trucks[id];
+      mass.addEventListener('input', () =>
+        this.changeSetup(id === 'a' ? { massA: Number(mass.value) } : { massB: Number(mass.value) }),
+      );
+      speed.addEventListener('input', () =>
+        this.changeSetup(id === 'a' ? { speedA: Number(speed.value) } : { speedB: Number(speed.value) }),
       );
     }
-    els.speed.addEventListener('input', () => this.changeSetup({ speed: Number(els.speed.value) }));
     els.friction.addEventListener('input', () => this.changeSetup({ frictionForce: Number(els.friction.value) }));
 
     els.run.addEventListener('click', () => this.toggleRun());
@@ -411,16 +414,19 @@ export class MomentumLesson {
     const { els, setup } = this;
     // Changing the setup in the middle of a run would make it meaningless.
     const locked = this.state === 'running';
-    for (const input of [els.trucks.a.mass, els.trucks.b.mass, els.speed, els.friction]) {
+    const { a, b } = els.trucks;
+    for (const input of [a.mass, a.speed, b.mass, b.speed, els.friction]) {
       input.disabled = locked;
       // How full the slider track is drawn (CSS reads --fill).
       const min = Number(input.min);
       const fill = ((Number(input.value) - min) / (Number(input.max) - min)) * 100;
       input.style.setProperty('--fill', `${clamp(fill, 0, 100)}%`);
     }
-    setText(els.trucks.a.massOut, t('massValue', { kg: num(setup.massA) }));
-    setText(els.trucks.b.massOut, t('massValue', { kg: num(setup.massB) }));
-    setText(els.speedOut, t('speedValue', { ms: num(setup.speed, 1), kmh: num(setup.speed * MS_TO_KMH) }));
+    const speedText = (speed: number): string => t('speedValue', { ms: num(speed, 1), kmh: num(speed * MS_TO_KMH) });
+    setText(a.massOut, t('massValue', { kg: num(setup.massA) }));
+    setText(b.massOut, t('massValue', { kg: num(setup.massB) }));
+    setText(a.speedOut, speedText(setup.speedA));
+    setText(b.speedOut, speedText(setup.speedB));
     setText(
       els.frictionOut,
       setup.frictionForce === 0 ? t('noFriction') : t('forceValue', { n: num(setup.frictionForce) }),
@@ -440,8 +446,8 @@ export class MomentumLesson {
       const snap = snaps[id];
       const motion = this.plan[id];
       const title = [name(id), t('massValue', { kg: num(motion.mass) })];
-      // In the challenge the speeds can differ, so each truck shows its own.
-      if (this.step === CHALLENGE) title.push(metersPerSecond(motion.v0));
+      // When the speeds differ (always possible in the challenge), each truck shows its own.
+      if (this.step === CHALLENGE || this.plan.a.v0 !== this.plan.b.v0) title.push(metersPerSecond(motion.v0));
       return {
         ...COLORS[id],
         mass: motion.mass,

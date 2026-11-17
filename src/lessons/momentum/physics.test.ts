@@ -18,18 +18,28 @@ const inRange = (value: number, range: { min: number; max: number }): boolean =>
 
 describe('momentum', () => {
   it('is mass times velocity', () => {
-    const { a, b } = planBoth(setup({ massA: 5_000, massB: 25_000, speed: 15 }));
+    const { a, b } = planBoth(setup({ massA: 5_000, massB: 25_000, speedA: 15, speedB: 15 }));
     expect(a.p0).toBe(75_000);
     expect(b.p0).toBe(375_000);
   });
 
   it('at the same speed, grows in proportion to mass', () => {
-    const { a, b } = planBoth(setup({ massA: 8_000, massB: 32_000, speed: 12 }));
+    const { a, b } = planBoth(setup({ massA: 8_000, massB: 32_000, speedA: 12, speedB: 12 }));
     expect(b.p0 / a.p0).toBeCloseTo(4);
   });
 
+  it('gives each truck its own speed: the same momentum from a light fast truck and a heavy slow one', () => {
+    const { a, b } = planBoth(setup({ massA: 10_000, massB: 30_000, speedA: 24, speedB: 8 }));
+    expect(a.v0).toBe(24);
+    expect(b.v0).toBe(8);
+    expect(a.p0).toBe(b.p0);
+    // The same momentum and the same force: they stop at the same time, but the faster one goes further.
+    expect(a.stopTime).toBeCloseTo(b.stopTime);
+    expect(a.stopDistance).toBeCloseTo(3 * b.stopDistance);
+  });
+
   it('is zero at rest, whatever the mass', () => {
-    const plan = planBoth(setup({ speed: 0 }));
+    const plan = planBoth(setup({ speedA: 0, speedB: 0 }));
     expect(plan.a.p0).toBe(0);
     expect(plan.b.p0).toBe(0);
     expect(plan.b.stopTime).toBe(0);
@@ -152,7 +162,8 @@ describe('defaults', () => {
   it('fit inside the slider ranges', () => {
     expect(inRange(DEFAULT_SETUP.massA, LIMITS.mass)).toBe(true);
     expect(inRange(DEFAULT_SETUP.massB, LIMITS.mass)).toBe(true);
-    expect(inRange(DEFAULT_SETUP.speed, LIMITS.speed)).toBe(true);
+    expect(inRange(DEFAULT_SETUP.speedA, LIMITS.speed)).toBe(true);
+    expect(inRange(DEFAULT_SETUP.speedB, LIMITS.speed)).toBe(true);
     expect(inRange(DEFAULT_SETUP.frictionForce, LIMITS.force)).toBe(true);
     expect(inRange(DEFAULT_SETUP.mu, LIMITS.mu)).toBe(true);
   });

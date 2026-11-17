@@ -17,7 +17,7 @@ export const EMPTY_TRUCK_MASS = 5_000;
 export const LIMITS = {
   /** From an empty truck to a fully loaded one (kg). */
   mass: { min: EMPTY_TRUCK_MASS, max: 40_000, step: 500 },
-  /** Common initial speed (m/s). 30 m/s = 108 km/h. */
+  /** Initial speed of a truck (m/s). 30 m/s = 108 km/h. */
   speed: { min: 0, max: 30, step: 0.5 },
   /** Friction force when both trucks feel the same force (N). */
   force: { min: 0, max: 50_000, step: 500 },
@@ -36,8 +36,9 @@ export type FrictionMode = 'force' | 'coefficient';
 export interface Setup {
   massA: number;
   massB: number;
-  /** Initial speed of both trucks (m/s). */
-  speed: number;
+  /** Initial speed of each truck (m/s). */
+  speedA: number;
+  speedB: number;
   frictionMode: FrictionMode;
   /** Friction force used in `force` mode (N). */
   frictionForce: number;
@@ -45,11 +46,12 @@ export interface Setup {
   mu: number;
 }
 
-/** An empty truck next to a loaded one, braking with the same force. */
+/** An empty truck next to a loaded one, at the same speed, braking with the same force. */
 export const DEFAULT_SETUP: Readonly<Setup> = {
   massA: 5_000,
   massB: 25_000,
-  speed: 15,
+  speedA: 15,
+  speedB: 15,
   frictionMode: 'force',
   frictionForce: 25_000,
   mu: 0.3,
@@ -113,8 +115,8 @@ export interface Plan {
 
 export function planBoth(setup: Readonly<Setup>): Plan {
   return {
-    a: planMotion(setup.massA, setup.speed, frictionOn(setup.massA, setup)),
-    b: planMotion(setup.massB, setup.speed, frictionOn(setup.massB, setup)),
+    a: planMotion(setup.massA, setup.speedA, frictionOn(setup.massA, setup)),
+    b: planMotion(setup.massB, setup.speedB, frictionOn(setup.massB, setup)),
   };
 }
 

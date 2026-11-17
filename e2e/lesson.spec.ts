@@ -7,8 +7,13 @@ const panel = (page: Page, n: number) => page.locator(`[data-panel="${n}"]`);
 /** A quick experiment: truck A stops after 1 s and 5 m, truck B after 2 s and 10 m. */
 async function quickSetup(page: Page): Promise<void> {
   await setSlider(page.locator('#mass-b'), 10_000);
-  await setSlider(page.locator('#speed'), 10);
+  await setBothSpeeds(page, 10);
   await setSlider(page.locator('#friction'), 50_000);
+}
+
+async function setBothSpeeds(page: Page, speed: number): Promise<void> {
+  await setSlider(page.locator('#speed-a'), speed);
+  await setSlider(page.locator('#speed-b'), speed);
 }
 
 test('loads cleanly, branded, and never contacts third parties', async ({ page, baseURL }) => {
@@ -39,15 +44,17 @@ test('ships a strict Content-Security-Policy with no unsafe sources', async ({ p
   expect(csp).not.toContain('unsafe-');
 });
 
-test('starts on the simulation: just the trucks and four sliders', async ({ page }) => {
+test('starts on the simulation: just the trucks and five sliders', async ({ page }) => {
   await page.goto('./');
   await expect(step(page, 1)).toHaveAttribute('aria-current', 'step');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Which truck is harder to stop?');
   await expect(scene(page)).toBeVisible();
-  await expect(panel(page, 1).locator('input[type="range"]')).toHaveCount(4);
+  await expect(panel(page, 1).locator('input[type="range"]')).toHaveCount(5);
   await expect(page.locator('#mass-a-out')).toHaveText('5,000 kg');
   await expect(page.locator('#mass-b-out')).toHaveText('25,000 kg');
-  await expect(page.locator('#speed-out')).toHaveText('15.0 m/s (54 km/h)');
+  await expect(page.locator('#speed-a-out')).toHaveText('15.0 m/s (54 km/h)');
+  await expect(page.locator('#speed-b-out')).toHaveText('15.0 m/s (54 km/h)');
+  await expect(page.getByRole('group', { name: 'Truck B' }).getByLabel('Initial speed')).toHaveValue('15');
   await expect(page.locator('#friction-out')).toHaveText('25,000 N');
   await expect(page.getByLabel('Friction same on both')).toBeVisible();
   for (const n of [2, 3, 4]) await expect(panel(page, n)).toBeHidden();
@@ -110,6 +117,23 @@ test('pauses with the button and Space, and resets with R', async ({ page }) => 
   await expect(page.locator('#clock')).toHaveText('t = 0.0 s');
 });
 
+test('each truck has its own initial speed', async ({ page }) => {
+  await page.goto('./');
+  // The light truck at 15 m/s and the heavy one at 3 m/s: the same momentum.
+  await setSlider(page.locator('#speed-b'), 3);
+  await expect(page.locator('#speed-a-out')).toHaveText('15.0 m/s (54 km/h)');
+  await expect(page.locator('#speed-b-out')).toHaveText('3.0 m/s (11 km/h)');
+
+  await step(page, 2).click();
+  await expect(page.locator('#a-speed')).toHaveText('15.0 m/s');
+  await expect(page.locator('#b-speed')).toHaveText('3.0 m/s');
+  await expect(page.locator('#ratios')).toHaveText('pA = pB');
+
+  await step(page, 3).click();
+  await expect(page.locator('#calc-pa')).toHaveText('pA = 5,000 kg × 15.0 m/s = 75,000 kg·m/s');
+  await expect(page.locator('#calc-pb')).toHaveText('pB = 25,000 kg × 3.0 m/s = 75,000 kg·m/s');
+});
+
 test('fast forward plays faster, and normal speed is always one click (or F) away', async ({ page }) => {
   await page.goto('./');
   const normal = page.getByRole('button', { name: 'Normal speed ×1' });
@@ -149,7 +173,7 @@ test('without friction the calculations say the momentum cannot change', async (
 
 test('challenge: on the same road both trucks stop together', async ({ page }) => {
   await page.goto('./');
-  await setSlider(page.locator('#speed'), 5); // a short run: about 1.7 s
+  await setBothSpeeds(page, 5); // a short run: about 1.7 s
   await step(page, 4).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Same road');
   await expect(page.locator('#step-lede')).toHaveText('f = μ·m·g (μ = 0.30)');
@@ -190,7 +214,7 @@ test('challenge: New problem deals another challenge, from the start line', asyn
 
   // Moving a slider brings back the trucks from the simulation.
   await step(page, 1).click();
-  await setSlider(page.locator('#speed'), 5);
+  await setSlider(page.locator('#speed-a'), 5);
   await step(page, 4).click();
   await expect(page.locator('#step-lede')).toHaveText('f = μ·m·g (μ = 0.30)');
   expect(problems).toEqual([]);
@@ -205,7 +229,7 @@ test('switches to Greek, with Greek numbers, and remembers the choice', async ({
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ποιο φορτηγό σταματά πιο δύσκολα;');
   await expect(step(page, 1)).toContainText('Προσομοίωση');
   await expect(page.locator('#mass-b-out')).toHaveText('25.000 kg');
-  await expect(page.locator('#speed-out')).toHaveText('15,0 m/s (54 km/h)');
+  await expect(page.locator('#speed-a-out')).toHaveText('15,0 m/s (54 km/h)');
   await expect(page.locator('#run-label')).toHaveText('Εκκίνηση');
 
   await page.reload();

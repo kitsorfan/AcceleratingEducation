@@ -2,9 +2,9 @@
  * The challenge: two trucks on the same road, so friction is μ·m·g and every truck decelerates at
  * μ·g, whatever its mass. Only the speed decides the stopping distance: x = v² / (2·μ·g).
  *
- * At first the challenge uses the trucks from the simulation. They share one speed, so they always
- * stop together. New problem deals a random one, where the trucks can also differ in speed. The
- * answer can then be truck A, truck B or "same distance".
+ * At first the challenge uses the trucks from the simulation, masses and speeds: at the default
+ * (same) speed they stop together. New problem deals a random one. Either way the answer can be
+ * truck A, truck B or "same distance".
  */
 import { G, LIMITS, planMotion, type Plan, type Setup } from './physics';
 
@@ -29,9 +29,9 @@ export const MIN_MASS_GAP = 10_000;
 /** Speeds that differ less than this (m/s) stop too close together to tell apart. */
 export const MIN_SPEED_GAP = 4;
 
-/** The challenge with the trucks from the simulation: the same speed for both. */
+/** The challenge with the trucks from the simulation: their masses and speeds, on the same road. */
 export function challengeFromSetup(setup: Readonly<Setup>): Challenge {
-  return { massA: setup.massA, massB: setup.massB, speedA: setup.speed, speedB: setup.speed, mu: setup.mu };
+  return { massA: setup.massA, massB: setup.massB, speedA: setup.speedA, speedB: setup.speedB, mu: setup.mu };
 }
 
 export function planChallenge(challenge: Readonly<Challenge>): Plan {
