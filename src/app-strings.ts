@@ -5,6 +5,7 @@ const en = {
   appName: 'ACCELERATING EDUCATION',
   teacher: 'Dr. Kontokostas George',
   language: 'Language',
+  darkMode: 'Dark mode',
   footer: 'Interactive physics lessons in English and Greek.',
   credit: 'Software development by',
 } as const;
@@ -15,6 +16,7 @@ const el: Record<AppKey, string> = {
   appName: 'ACCELERATING EDUCATION',
   teacher: 'Dr. Kontokostas George',
   language: 'Γλώσσα',
+  darkMode: 'Σκούρο θέμα',
   footer: 'Διαδραστικά μαθήματα φυσικής στα ελληνικά και στα αγγλικά.',
   credit: 'Ανάπτυξη λογισμικού:',
 };

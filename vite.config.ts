@@ -46,5 +46,7 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',
+    // CSS imports are blanked in tests; theme.test.ts reads the stylesheet's text.
+    css: { include: [/src\/style\.css/] },
   },
 });

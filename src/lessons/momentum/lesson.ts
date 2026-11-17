@@ -27,6 +27,7 @@ import {
   type Setup,
   type Snapshot,
 } from './physics';
+import { onThemeChange } from '../../theme';
 import { drawScene, naturalSceneHeight, type SceneTruck } from './scene';
 import { STRINGS, type MomentumKey } from './strings';
 import { TEMPLATE } from './template';
@@ -221,7 +222,7 @@ export class MomentumLesson {
     // The canvases also follow the window height (a phone turned sideways), not just their width.
     window.addEventListener('resize', () => this.invalidate());
     onLangChange(() => this.translate());
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    onThemeChange(() => {
       this.graphTheme = readTheme();
       this.invalidate();
     });

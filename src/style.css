@@ -40,8 +40,17 @@
   --gutter: clamp(16px, 2.5vw, 40px);
 }
 
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/*
+ * Dark: when the device asks for it and no one picked light, or when someone picked dark
+ * (theme.ts sets data-theme). The two lists must stay identical; theme.test.ts checks.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
     --bg: #0b0f1a;
     --nav-bg: rgb(11 15 26 / 0.86);
     --surface: #121826;
@@ -72,6 +81,39 @@
     --shadow-sm: none;
     --shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6);
   }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b0f1a;
+  --nav-bg: rgb(11 15 26 / 0.86);
+  --surface: #121826;
+  --surface-2: #19202f;
+  --surface-3: #222a3d;
+  --text: #e7ebf3;
+  --muted: #98a2b8;
+  --border: #252f45;
+  --border-strong: #36415c;
+  --grid: #20293c;
+  --track: #2a3349;
+  --accent: #8b5cf6;
+  --accent-hi: #a78bfa;
+  --accent-lo: #7c3aed;
+  --accent-soft: #261d45;
+  --accent-glow: rgb(139 92 246 / 0.45);
+  --ring: rgb(167 139 250 / 0.45);
+  --truck-a-ink: #93b4ff;
+  --truck-a-soft: #18264a;
+  --truck-a-line: #5b8cff;
+  --truck-b-ink: #ffad6b;
+  --truck-b-soft: #3a2414;
+  --truck-b-line: #ff9a4a;
+  --good: #4ade80;
+  --good-soft: #0f2d1d;
+  --bad: #f87171;
+  --bad-soft: #3a1618;
+  --shadow-sm: none;
+  --shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6);
 }
 
 *,
@@ -186,10 +228,68 @@ body {
 }
 
 @media (max-width: 420px) {
+  .app-header-inner {
+    gap: 8px;
+  }
+
+  .brand {
+    gap: 8px;
+  }
+
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+  }
+
   .brand-name {
     font-size: 0.8rem;
     letter-spacing: 0.04em;
   }
+
+  .brand-teacher {
+    font-size: 0.75rem;
+  }
+}
+
+.header-tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Light / dark: shows the moon in light mode and the sun in dark mode, i.e. where a tap goes. */
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.theme-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--accent);
+}
+
+.theme-toggle .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.theme-toggle[aria-pressed='true'] .icon-moon,
+.theme-toggle[aria-pressed='false'] .icon-sun {
+  display: none;
 }
 
 .lang-switch {
