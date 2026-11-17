@@ -41,6 +41,7 @@ const en = {
   speed: 'Speed',
   speedValue: '{ms} m/s ({kmh} km/h)',
   friction: 'Friction',
+  frictionNote: 'same on both',
   forceValue: '{n} N',
   noFriction: '0 N (none)',
 
@@ -118,6 +119,7 @@ const el: Record<MomentumKey, string> = {
   speed: 'Ταχύτητα',
   speedValue: '{ms} m/s ({kmh} km/h)',
   friction: 'Τριβή',
+  frictionNote: 'ίδια και στα δύο',
   forceValue: '{n} N',
   noFriction: '0 N (καθόλου)',
 

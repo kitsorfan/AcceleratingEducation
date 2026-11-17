@@ -49,6 +49,7 @@ test('starts on the simulation: just the trucks and four sliders', async ({ page
   await expect(page.locator('#mass-b-out')).toHaveText('25,000 kg');
   await expect(page.locator('#speed-out')).toHaveText('15.0 m/s (54 km/h)');
   await expect(page.locator('#friction-out')).toHaveText('25,000 N');
+  await expect(page.getByLabel('Friction same on both')).toBeVisible();
   for (const n of [2, 3, 4]) await expect(panel(page, n)).toBeHidden();
   await expect(page.getByRole('button', { name: /back|next/i })).toHaveCount(0);
 });

@@ -12,11 +12,21 @@ const ICONS = /* html */ `
 const icon = (name: string, id = ''): string =>
   `<svg class="icon" aria-hidden="true" focusable="false"><use ${id ? `id="${id}" ` : ''}href="#i-${name}"></use></svg>`;
 
-/** One slider with its label and current value. */
-const slider = (id: string, key: string, range: { min: number; max: number; step: number }, extraClass = ''): string => /* html */ `
+/** One slider with its label, an optional small note after the label, and its current value. */
+const slider = (
+  id: string,
+  key: string,
+  range: { min: number; max: number; step: number },
+  extraClass = '',
+  noteKey = '',
+): string => /* html */ `
       <div class="field ${extraClass}">
         <div class="field-head">
-          <label for="${id}" data-i18n="${key}"></label>
+          ${
+            noteKey
+              ? `<label for="${id}"><span data-i18n="${key}"></span> <small class="field-note" data-i18n="${noteKey}"></small></label>`
+              : `<label for="${id}" data-i18n="${key}"></label>`
+          }
           <output class="badge" id="${id}-out" for="${id}"></output>
         </div>
         <input type="range" id="${id}" min="${range.min}" max="${range.max}" step="${range.step}" />
@@ -63,7 +73,7 @@ ${ICONS}
 ${slider('mass-a', 'massA', LIMITS.mass, 'truck-a')}
 ${slider('mass-b', 'massB', LIMITS.mass, 'truck-b')}
 ${slider('speed', 'speed', LIMITS.speed)}
-${slider('friction', 'friction', LIMITS.force)}
+${slider('friction', 'friction', LIMITS.force, '', 'frictionNote')}
     </div>
   </section>
 

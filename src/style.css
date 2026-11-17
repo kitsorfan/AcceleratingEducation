@@ -751,6 +751,14 @@ body {
   font-weight: 650;
 }
 
+/* A small aside after a slider's label, e.g. "same on both". */
+.field-note {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
 .badge {
   padding: 2px 10px;
   border: 1px solid var(--border);
