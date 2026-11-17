@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import {
   MIN_MASS_GAP,
   MIN_SPEED_GAP,
-  SHUFFLE_MU,
+  RANDOM_MU,
   challengeFromSetup,
   planChallenge,
-  shuffleChallenge,
+  randomChallenge,
   type Challenge,
 } from './challenge';
 import { DEFAULT_SETUP, G, LIMITS, outcomeOf, runDuration } from './physics';
 
-/** A small seeded random source (mulberry32), so the shuffle tests are repeatable. */
+/** A small seeded random source (mulberry32), so the random tests are repeatable. */
 function seeded(seed: number): () => number {
   let state = seed;
   return () => {
@@ -24,13 +24,13 @@ function seeded(seed: number): () => number {
 /** A broken random source that always returns the same number. */
 const stuck = (): number => 0;
 
-/** A run of shuffles, each dealt from the one before, as a teacher pressing Shuffle again and again. */
-function shuffles(count: number, seed = 1): Challenge[] {
+/** Random challenges, each dealt from the one before, as a teacher pressing New problem again and again. */
+function newProblems(count: number, seed = 1): Challenge[] {
   const random = seeded(seed);
   const dealt: Challenge[] = [];
   let current: Challenge | null = challengeFromSetup(DEFAULT_SETUP);
   for (let i = 0; i < count; i++) {
-    current = shuffleChallenge(current, random);
+    current = randomChallenge(current, random);
     dealt.push(current);
   }
   return dealt;
@@ -68,8 +68,8 @@ describe('planChallenge', () => {
   });
 });
 
-describe('shuffleChallenge', () => {
-  const dealt = shuffles(600);
+describe('randomChallenge', () => {
+  const dealt = newProblems(600);
 
   it('deals trucks inside the slider ranges, in whole tonnes and whole m/s', () => {
     for (const c of dealt) {
@@ -83,7 +83,7 @@ describe('shuffleChallenge', () => {
         expect(speed).toBeGreaterThan(0);
         expect(speed).toBeLessThanOrEqual(LIMITS.speed.max);
       }
-      expect(SHUFFLE_MU).toContain(c.mu);
+      expect(RANDOM_MU).toContain(c.mu);
     }
   });
 
@@ -124,8 +124,8 @@ describe('shuffleChallenge', () => {
   });
 
   it('still returns a valid challenge from a random source that never changes', () => {
-    const first = shuffleChallenge(null, stuck);
-    expect(shuffleChallenge(first, stuck)).toEqual(first);
+    const first = randomChallenge(null, stuck);
+    expect(randomChallenge(first, stuck)).toEqual(first);
     expect(outcomeOf(planChallenge(first))).not.toBe('never-stop');
   });
 });

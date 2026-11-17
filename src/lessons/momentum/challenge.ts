@@ -3,7 +3,7 @@
  * μ·g, whatever its mass. Only the speed decides the stopping distance: x = v² / (2·μ·g).
  *
  * At first the challenge uses the trucks from the simulation. They share one speed, so they always
- * stop together. Shuffle deals a new challenge, where the trucks can also differ in speed. The
+ * stop together. New problem deals a random one, where the trucks can also differ in speed. The
  * answer can then be truck A, truck B or "same distance".
  */
 import { G, LIMITS, planMotion, type Plan, type Setup } from './physics';
@@ -18,11 +18,11 @@ export interface Challenge {
   mu: number;
 }
 
-/** Road surfaces a shuffled challenge can use: from wet asphalt to dry. */
-export const SHUFFLE_MU = [0.3, 0.4, 0.5, 0.6, 0.7] as const;
-/** Shuffled masses are whole tonnes inside the slider range (kg). */
+/** Road surfaces a random challenge can use: from wet asphalt to dry. */
+export const RANDOM_MU = [0.3, 0.4, 0.5, 0.6, 0.7] as const;
+/** Random masses are whole tonnes inside the slider range (kg). */
 const MASS_STEP = 1_000;
-/** Shuffled speeds are whole m/s, up to 25 m/s = 90 km/h. */
+/** Random speeds are whole m/s, up to 25 m/s = 90 km/h. */
 const SPEED = { min: 6, max: 25 } as const;
 /** Masses that differ less than this (kg) look too alike to be the point of a challenge. */
 export const MIN_MASS_GAP = 10_000;
@@ -100,14 +100,14 @@ const DEALS = [sameSpeed, differentSpeeds, sameMomentum] as const;
 function deal(random: Random): Challenge {
   const [first, second] = pick(random, DEALS)(random);
   const [a, b] = random() < 0.5 ? [first, second] : [second, first];
-  return { massA: a.mass, massB: b.mass, speedA: a.speed, speedB: b.speed, mu: pick(random, SHUFFLE_MU) };
+  return { massA: a.mass, massB: b.mass, speedA: a.speed, speedB: b.speed, mu: pick(random, RANDOM_MU) };
 }
 
 const sameChallenge = (x: Readonly<Challenge>, y: Readonly<Challenge>): boolean =>
   x.massA === y.massA && x.massB === y.massB && x.speedA === y.speedA && x.speedB === y.speedB && x.mu === y.mu;
 
 /** A new random challenge, never the same as the one on screen. */
-export function shuffleChallenge(current: Readonly<Challenge> | null, random: Random = Math.random): Challenge {
+export function randomChallenge(current: Readonly<Challenge> | null, random: Random = Math.random): Challenge {
   let next = deal(random);
   if (!current) return next;
   // A repeat is rare; a few more deals avoid it (and a broken random source can't loop forever).

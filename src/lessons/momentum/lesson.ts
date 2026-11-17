@@ -4,7 +4,7 @@
  * 1. Simulation: two trucks, four sliders (masses, speed, friction), Run.
  * 2. Graph: the same road, plus the p–t graph and a table.
  * 3. Calculations: p = m·v and F·Δt = Δp, with the numbers from the simulation.
- * 4. Challenge: on the same road friction is μ·m·g; predict, then run. Shuffle deals another one.
+ * 4. Challenge: on the same road friction is μ·m·g; predict, then run. New problem deals another one.
  *
  * A stepper at the top lets the teacher jump between the steps at any time.
  *
@@ -12,7 +12,7 @@
  */
 import { escapeHtml, formatNumber, onLangChange, translate, translateDom, type Params } from '../../i18n/i18n';
 import { clamp, niceCeil, ratioDigits } from '../../lib/nice';
-import { challengeFromSetup, planChallenge, shuffleChallenge, type Challenge } from './challenge';
+import { challengeFromSetup, planChallenge, randomChallenge, type Challenge } from './challenge';
 import { drawGraph, type GraphSeries, type GraphTheme } from './graph';
 import {
   DEFAULT_SETUP,
@@ -126,7 +126,7 @@ function lookup(root: HTMLElement) {
     runLabel: query(root, '#run-label', HTMLSpanElement),
     runIcon: query(root, '#run-icon', SVGUseElement),
     reset: query(root, '#reset', HTMLButtonElement),
-    shuffle: query(root, '#shuffle', HTMLButtonElement),
+    newProblem: query(root, '#new-problem', HTMLButtonElement),
     clock: query(root, '#clock', HTMLOutputElement),
     speed: query(root, '#speed', HTMLInputElement),
     speedOut: query(root, '#speed-out', HTMLOutputElement),
@@ -148,8 +148,8 @@ type Elements = ReturnType<typeof lookup>;
 export class MomentumLesson {
   /** What the sliders set. The friction mode comes from the step (see `planForStep`). */
   private setup: Setup = { ...DEFAULT_SETUP };
-  /** A challenge dealt by Shuffle; null while the challenge uses the trucks from the sliders. */
-  private shuffled: Challenge | null = null;
+  /** A random challenge from New problem; null while the challenge uses the trucks from the sliders. */
+  private randomProblem: Challenge | null = null;
   private step: Step = stepFromHash(location.hash);
   private plan: Plan = this.planForStep();
   private state: RunState = 'ready';
@@ -178,7 +178,7 @@ export class MomentumLesson {
   }
 
   private challenge(): Challenge {
-    return this.shuffled ?? challengeFromSetup(this.setup);
+    return this.randomProblem ?? challengeFromSetup(this.setup);
   }
 
   private wire(): void {
@@ -194,7 +194,7 @@ export class MomentumLesson {
 
     els.run.addEventListener('click', () => this.toggleRun());
     els.reset.addEventListener('click', () => this.reset());
-    els.shuffle.addEventListener('click', () => this.shuffle());
+    els.newProblem.addEventListener('click', () => this.newProblem());
     for (const tab of els.tabs) tab.addEventListener('click', () => this.goTo(stepFromHash(`#step-${tab.dataset['step']}`)));
     for (const button of els.predictions) {
       button.addEventListener('click', () => {
@@ -228,8 +228,8 @@ export class MomentumLesson {
       this.toggleRun();
     } else if (event.code === 'KeyR') {
       this.reset();
-    } else if (event.code === 'KeyS') {
-      this.shuffle();
+    } else if (event.code === 'KeyN') {
+      this.newProblem();
     }
   }
 
@@ -258,7 +258,7 @@ export class MomentumLesson {
   private changeSetup(patch: Partial<Setup>): void {
     if (this.state === 'running') return;
     this.setup = { ...this.setup, ...patch };
-    this.shuffled = null; // the challenge follows the sliders again
+    this.randomProblem = null; // the challenge follows the sliders again
     this.plan = this.planForStep();
     if (this.state !== 'ready') this.reset();
     this.invalidate();
@@ -282,9 +282,9 @@ export class MomentumLesson {
   }
 
   /** A new challenge (other trucks, speeds and road), from the start line. */
-  private shuffle(): void {
+  private newProblem(): void {
     if (this.step !== CHALLENGE) return;
-    this.shuffled = shuffleChallenge(this.challenge());
+    this.randomProblem = randomChallenge(this.challenge());
     this.plan = this.planForStep();
     this.reset();
   }
@@ -353,7 +353,7 @@ export class MomentumLesson {
     const titles: Record<Step, MomentumKey> = { 1: 'step1Title', 2: 'step2Title', 3: 'step3Title', 4: 'step4Title' };
     setText(els.title, t(titles[step]));
     els.lede.hidden = step !== CHALLENGE;
-    els.shuffle.hidden = step !== CHALLENGE;
+    els.newProblem.hidden = step !== CHALLENGE;
     if (step === CHALLENGE) setText(els.lede, t('step4Lede', { mu: num(this.challenge().mu, 2) }));
   }
 

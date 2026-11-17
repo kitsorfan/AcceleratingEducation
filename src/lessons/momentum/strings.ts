@@ -31,7 +31,7 @@ const en = {
   resume: 'Continue',
   runAgain: 'Run again',
   reset: 'Reset',
-  shuffle: 'Shuffle',
+  newProblem: 'New problem',
   clock: 't = {t} s',
   clockFast: 't = {t} s (×{k})',
 
@@ -108,7 +108,7 @@ const el: Record<MomentumKey, string> = {
   resume: 'Συνέχεια',
   runAgain: 'Ξανά',
   reset: 'Επαναφορά',
-  shuffle: 'Ανακάτεμα',
+  newProblem: 'Νέο πρόβλημα',
   clock: 't = {t} s',
   clockFast: 't = {t} s (×{k})',
 

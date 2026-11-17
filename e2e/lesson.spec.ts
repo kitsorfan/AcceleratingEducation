@@ -134,6 +134,39 @@ test('challenge: on the same road both trucks stop together', async ({ page }) =
   await expect(page.locator('#explain')).toContainText('a = μ·g = 2.94 m/s²');
 });
 
+test('challenge: New problem deals another challenge, from the start line', async ({ page }) => {
+  const problems = watchForProblems(page);
+  await page.clock.install(); // so a run can be played to the end without waiting for it
+  await page.goto('./');
+  const newProblem = page.getByRole('button', { name: 'New problem' });
+  await expect(newProblem).toBeHidden();
+  await step(page, 4).click();
+  await expect(newProblem).toBeVisible();
+
+  await page.getByRole('button', { name: 'Truck A' }).click();
+  await page.locator('#run').click();
+  await newProblem.click();
+  await expect(scene(page)).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#clock')).toHaveText('t = 0.0 s');
+  await expect(page.getByRole('button', { name: 'Truck A' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#step-lede')).toHaveText(/^f\s=\sμ·m·g\s\(μ\s=\s0\.[3-7]0\)$/); // no-break spaces
+
+  await page.locator('h1').click();
+  await page.keyboard.press('KeyN'); // N deals a new problem too
+  await page.locator('#run').click();
+  await page.clock.runFor(10_000); // every random run is over in under 10 s
+  await expect(scene(page)).toHaveAttribute('data-state', 'finished');
+  await expect(page.locator('#verdict')).toHaveText(/^Answer: (Truck A|Truck B|Same distance)\.$/);
+  await expect(page.locator('#explain')).toContainText('μ·g =');
+
+  // Moving a slider brings back the trucks from the simulation.
+  await step(page, 1).click();
+  await setSlider(page.locator('#speed'), 5);
+  await step(page, 4).click();
+  await expect(page.locator('#step-lede')).toHaveText('f = μ·m·g (μ = 0.30)');
+  expect(problems).toEqual([]);
+});
+
 test('switches to Greek, with Greek numbers, and remembers the choice', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: 'ΕΛ' }).click();

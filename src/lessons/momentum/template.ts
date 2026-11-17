@@ -53,7 +53,7 @@ ${ICONS}
     <div class="transport">
       <button type="button" class="btn btn-primary btn-run" id="run">${icon('play', 'run-icon')}<span id="run-label"></span></button>
       <button type="button" class="btn btn-outline" id="reset">${icon('reset')}<span data-i18n="reset"></span></button>
-      <button type="button" class="btn btn-outline" id="shuffle" hidden>${icon('shuffle')}<span data-i18n="shuffle"></span></button>
+      <button type="button" class="btn btn-outline" id="new-problem" hidden>${icon('shuffle')}<span data-i18n="newProblem"></span></button>
       <output class="clock" id="clock"></output>
     </div>
   </section>

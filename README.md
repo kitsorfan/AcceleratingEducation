@@ -15,13 +15,13 @@ A stepper at the top (**Simulation · Graph · Calculations · Challenge**) move
 1. **Simulation:** the two trucks and four sliders: the mass of each truck (5,000 to 40,000 kg), the shared speed (0 to 30 m/s), and the friction force (0 to 50,000 N, the same on both trucks). The crates grow with the cargo, and each truck's momentum arrow is drawn to scale.
 2. **Graph:** the same road, plus a table (m, v, p, distance, time to stop), the p–t graph, and the comparison as formulas, e.g. `pB = 5 × pA`, `tB = 5 × tA`, `xB = 5 × xA`.
 3. **Calculations:** p = m·v and F·Δt = Δp ⇒ Δt = p / F, worked out with the numbers from the simulation.
-4. **Challenge:** the same road, where friction is μ·m·g. Students predict which truck needs more road, then run it. With the trucks from the simulation, both stop together, because a = μ·g for both. **Shuffle** deals new trucks with different masses and speeds, so the answer can be either truck or the same distance: only the speed decides it (x = v² / 2μg).
+4. **Challenge:** the same road, where friction is μ·m·g. Students predict which truck needs more road, then run it. With the trucks from the simulation, both stop together, because a = μ·g for both. **New problem** deals new trucks with different masses and speeds, so the answer can be either truck or the same distance: only the speed decides it (x = v² / 2μg).
 
 ![Graph step after a run: truck A stopped at 22.5 m after 3 s, truck B at 112.5 m after 15 s](docs/screenshots/graph.png)
 
 Why "same force" is the default: if friction were μ·m·g, the heavier truck would also feel a proportionally bigger force, and both trucks would stop at the same spot. That would hide the momentum difference, so the main experiment applies the same friction force to both trucks, and the μ·m·g case becomes the challenge.
 
-Long runs (very low friction) play faster, so a run never takes much more than 20 seconds. The clock shows the speed-up, e.g. "(×3)". On a keyboard, Space runs or pauses and R resets.
+Long runs (very low friction) play faster, so a run never takes much more than 20 seconds. The clock shows the speed-up, e.g. "(×3)". On a keyboard, Space runs or pauses, R resets and, on the challenge, N deals a new problem.
 
 The Greek version follows the school textbook conventions: υ for velocity, T for friction, α for acceleration, Α / Β for the trucks, and decimal commas.
 
