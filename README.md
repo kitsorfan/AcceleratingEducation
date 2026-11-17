@@ -1,32 +1,35 @@
-# Physics AI Teacher
+# Accelerating Education
 
-Interactive physics lessons in **English and Greek** that run in the browser, with nothing to install. The site is static TypeScript, published on GitHub Pages.
+Interactive physics lessons by **Dr. Kontokostas George**, in **English and Greek**. They run in the browser with nothing to install: a static TypeScript site published on GitHub Pages.
+
+The pages are kept short on purpose. The teacher explains, and the page shows the experiment, the numbers and the formulas.
 
 ## Lesson 1: Momentum (Ορμή)
 
 Two trucks drive side by side at the same speed. One is empty and the other is loaded. Which one is harder to stop?
 
-![Lesson 1 in English: the loaded truck B needed 5 times the road of the empty truck A to stop](docs/screenshots/momentum-en.png)
+![Simulation step: two trucks at the start line with their momentum arrows, and four sliders](docs/screenshots/simulation.png)
 
-The student can:
+A stepper at the top (**Simulation · Graph · Calculations · Challenge**) moves between the steps at any time. It stays on screen while scrolling, and the address remembers the step (`#step-2`), so a link can open a specific step.
 
-- **Set the mass of each truck**, from 5,000 kg (empty) to 40,000 kg (fully loaded). The crates on the truck grow with the cargo.
-- **Set the initial speed**, shared by both trucks: 0 to 30 m/s (0 to 108 km/h).
-- **Set the road friction**, from 0 upwards, in one of two modes:
-  - **Same force on both** (default): both trucks feel the same friction force, as if both drivers braked equally hard. The loaded truck has more momentum, so it needs more time and more road to stop (Δt = p / F). This is the classic momentum demonstration.
-  - **Same road (μ)**: friction is μ·m·g, so it grows with the mass. Both trucks slow down at μ·g and **stop together**, even though their momenta differ. This makes a good trick question once students have the first idea.
-  - **Friction 0**: nothing slows the trucks down, and their momentum stays constant (Newton's first law).
-- **Predict, then run**: before the run, students pick which truck will need more distance to stop. After it, they get a verdict and an explanation built from the numbers of that run, plus a suggestion for the next experiment.
-- **Watch and measure**: momentum arrows drawn to scale, a ruler along each road, stop markers, an overview of the whole road, a live table (m, v, p = m·v, friction, deceleration, distance, time to stop), momentum bars, and a p–t or v–t graph whose slope is the friction force or the deceleration.
-- **Control playback**: run, pause, reset, skip to the end, and ×0.5 to ×4 speed. On a keyboard, Space runs or pauses and R resets.
+1. **Simulation:** the two trucks and four sliders: the mass of each truck (5,000 to 40,000 kg), the shared speed (0 to 30 m/s), and the friction force (0 to 50,000 N, the same on both trucks). The crates grow with the cargo, and each truck's momentum arrow is drawn to scale.
+2. **Graph:** the same road, plus a table (m, v, p, distance, time to stop), the p–t graph, and the comparison as formulas, e.g. `pB = 5 × pA`, `tB = 5 × tA`, `xB = 5 × xA`.
+3. **Calculations:** p = m·v and F·Δt = Δp ⇒ Δt = p / F, worked out with the numbers from the simulation.
+4. **Challenge:** the same road, where friction is μ·m·g. Students predict which truck needs more road, then run it. With the trucks from the simulation, both stop together, because a = μ·g for both. **Shuffle** deals new trucks with different masses and speeds, so the answer can be either truck or the same distance: only the speed decides it (x = v² / 2μg).
 
-The Greek version follows the school textbook conventions: υ for velocity, T for friction, α for acceleration, Α / Β for the trucks, and decimal commas (15,0 m/s, 375.000 kg·m/s).
+![Graph step after a run: truck A stopped at 22.5 m after 3 s, truck B at 112.5 m after 15 s](docs/screenshots/graph.png)
 
-![Lesson 1 in Greek, "same road (μ)" mode: both trucks stop together at 38,2 m](docs/screenshots/momentum-el.png)
+Why "same force" is the default: if friction were μ·m·g, the heavier truck would also feel a proportionally bigger force, and both trucks would stop at the same spot. That would hide the momentum difference, so the main experiment applies the same friction force to both trucks, and the μ·m·g case becomes the challenge.
+
+Long runs (very low friction) play faster, so a run never takes much more than 20 seconds. The clock shows the speed-up, e.g. "(×3)". On a keyboard, Space runs or pauses and R resets.
+
+The Greek version follows the school textbook conventions: υ for velocity, T for friction, α for acceleration, Α / Β for the trucks, and decimal commas.
+
+![Challenge step in Greek: both trucks stopped together at 38,2 m](docs/screenshots/challenge-el.png)
 
 ### Language
 
-The **EN / ΕΛ** switch is in the top right corner, and the browser remembers the choice. A link can also set the language: add `?lang=el` or `?lang=en` to the address. If neither is set, the page follows the browser's language.
+The **EN / ΕΛ** switch is in the top right corner, and the browser remembers the choice. A link can set the language too: add `?lang=el` or `?lang=en`. Otherwise the page follows the browser's language.
 
 ## Development
 
@@ -52,8 +55,8 @@ The end-to-end tests use Playwright's Chromium. Install it once with `npx playwr
 
 ### Testing
 
-- **Unit tests** (`src/**/*.test.ts`) cover the physics: p = m·v, the impulse-momentum theorem, stopping times and distances in both friction modes, no friction, trucks at rest, and the answer to the prediction question. They also check the graph lines, the camera, number formatting in each language, and language detection. Another test makes sure the English and Greek text have the same keys and `{placeholders}`, and that every `data-i18n` key in the markup exists.
-- **End-to-end tests** (`e2e/`) build the site and use it in a real browser. They check that it loads without errors, makes no third-party requests, ships a strict CSP, and shows live momentum values. They also run each kind of experiment (same force, same road, no friction), check pause, keyboard and reset, and switch to Greek. A phone project checks that the page fits a phone screen and works with taps.
+- **Unit tests** (`src/**/*.test.ts`) cover the physics: p = m·v, the impulse-momentum theorem, stopping times and distances with the same force and on the same road, no friction, and trucks at rest. They also cover the camera, the graph line, playback speed-up, step links, number formatting per language, and language detection. Another test keeps the English and Greek text in sync: same keys, same `{placeholders}`, and every key used in the markup defined.
+- **End-to-end tests** (`e2e/`) build the site and use it in a real browser. They check that it loads cleanly with no third-party requests and ships a strict CSP. They also test the four steps and the stepper, a run that continues across steps, pause and reset, no friction, the challenge, and Greek. On a phone, they check that every step fits the screen and that the stepper stays in reach.
 
 ### Project structure
 
@@ -61,23 +64,21 @@ The end-to-end tests use Playwright's Chromium. Install it once with `npx playwr
 src/
   main.ts                  entry point: language switch, mounts the lesson
   app-strings.ts           header and footer text (EN / EL)
-  style.css                layout and theme (light by default, dark when the device asks)
+  style.css                theme and layout (light by default, dark when the device asks)
   i18n/i18n.ts             language detection and switching, translations, number formatting
   lib/nice.ts              round numbers for axes and rulers
   lessons/momentum/
     physics.ts             exact motion of two braking trucks (no step-by-step integration)
-    lesson.ts              state (ready, running, paused, finished), controls, readouts, prediction, explanations
-    scene.ts               canvas drawing: roads, trucks, momentum arrows, ruler, overview
-    graph.ts               p–t / v–t graph
+    lesson.ts              steps, run state, sliders, readouts, calculations, challenge
+    scene.ts               canvas drawing: roads, trucks, momentum arrows, ruler, camera
+    graph.ts               p–t graph
     strings.ts             all lesson text in English and Greek
-    template.ts            lesson markup (text comes from strings.ts)
+    template.ts            lesson markup and icons (text comes from strings.ts)
 e2e/                       Playwright end-to-end tests
 .github/                   CI/CD workflow and Dependabot config
 ```
 
-### Adding a lesson
-
-Create a folder under `src/lessons/` with the same parts: physics, strings (both languages), template, and a `mount…Lesson(root)` function. Then mount it from `main.ts`. Once there are several lessons, `main.ts` is the place to add a lesson menu.
+To add a lesson, create a folder under `src/lessons/` with the same parts, and mount it from `main.ts`.
 
 ## Security and privacy
 
@@ -89,8 +90,8 @@ Create a folder under `src/lessons/` with the same parts: physics, strings (both
 
 The build uses relative asset paths (`base: './'`), so it works from `https://<user>.github.io/<repo>/`. The workflow in `.github/workflows/ci.yml` runs lint, tests and the build on every push and pull request, and deploys `main` when everything passes.
 
-1. Create a GitHub repository (for example `PhysicsAITeacher`) and push this project to its `main` branch.
+1. Create a public GitHub repository (for example `PhysicsAITeacher`) and push this project to its `main` branch.
 2. In the repository, go to **Settings > Pages > Build and deployment** and set **Source** to **GitHub Actions**.
 3. Push to `main`. The site goes live at `https://<user>.github.io/PhysicsAITeacher/`.
 
-GitHub Pages on a free account needs a **public** repository. Publishing from a private repository needs a paid plan (GitHub Pro, Team or Enterprise), and even then the published site is public.
+Software development by Kitsos Orfanopoulos ([www.kitsorfan.com](https://www.kitsorfan.com)).
