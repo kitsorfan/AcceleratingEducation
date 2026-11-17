@@ -384,6 +384,37 @@ body {
   }
 }
 
+/*
+ * Laptop screens (wide but short, e.g. a 15.6" Full HD laptop at 125%): on the simulation and the
+ * challenge the step's panel (sliders, prediction) sits beside the road, so the road, its buttons
+ * and the panel all fit one screen, no scrolling. The road takes the height that is left
+ * (lesson.ts). Taller screens keep the panel under the road.
+ */
+@media (min-width: 1100px) and (max-height: 820px) {
+  [data-step='1'] > .lesson,
+  [data-step='4'] > .lesson {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(400px, 30%, 520px);
+    align-items: start;
+  }
+
+  [data-step='1'] > .lesson > :not(#sim, .step-panel),
+  [data-step='4'] > .lesson > :not(#sim, .step-panel) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Short laptop screens (e.g. Full HD at 150%): a little tighter, so the sliders still fit beside the road. */
+@media (min-width: 1100px) and (max-height: 620px) {
+  .eyebrow {
+    display: none;
+  }
+
+  .lesson {
+    gap: 12px;
+  }
+}
+
 /* Always in reach: the stepper sticks to the top while the page scrolls. */
 .lesson-nav {
   position: sticky;
@@ -816,6 +847,35 @@ body {
   }
 }
 
+/* Beside the road on a laptop: still one column per truck, each value under its label to fit. */
+@media (min-width: 1100px) and (max-height: 820px) {
+  .controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 24px;
+  }
+
+  .field-wide {
+    grid-column: 1 / -1;
+  }
+
+  .truck-group .field-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Short laptop screens: a little tighter, so the sliders fit beside the road. */
+@media (min-width: 1100px) and (max-height: 620px) {
+  .controls {
+    padding: 14px;
+    row-gap: 14px;
+  }
+
+  .truck-group legend {
+    padding-bottom: 6px;
+  }
+}
+
 .field {
   min-width: 0;
 }
@@ -1116,6 +1176,17 @@ input[type='range']:disabled {
     box-shadow 0.15s;
 }
 
+/* Beside the road on a laptop: the three answers in one row, so the result fits under them. */
+@media (min-width: 1100px) and (max-height: 820px) {
+  .choices {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .choice {
+    padding: 8px 10px;
+  }
+}
+
 .choice:hover:not(:disabled) {
   border-color: var(--border-strong);
   transform: translateY(-1px);
@@ -1191,6 +1262,19 @@ input[type='range']:disabled {
 
 .explain {
   margin: 0;
+}
+
+/* Beside the road on a laptop: a slightly smaller explanation, so the whole result fits the screen. */
+@media (min-width: 1100px) and (max-height: 820px) {
+  .result {
+    margin-top: 12px;
+    padding: 10px 14px;
+  }
+
+  .explain {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
 }
 
 /* ---- Footer credit ------------------------------------------------------------------------ */

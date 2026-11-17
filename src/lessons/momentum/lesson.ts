@@ -47,9 +47,8 @@ const MAX_FRAME_STEP = 0.1;
 const MAX_RUN_SECONDS = 20;
 /** How much faster the fast-forward button plays, on top of the automatic speed-up. */
 export const FAST_FORWARD = 4;
-/** Canvas heights (px): the road never gets shorter than this, nor taller than this share of the window. */
+/** Canvas heights (px): the road never gets shorter than this; the graph stays within these and this share of the window. */
 const MIN_SCENE_HEIGHT = 220;
-const SCENE_SHARE = 0.6;
 const MIN_GRAPH_HEIGHT = 200;
 const MAX_GRAPH_HEIGHT = 400;
 const GRAPH_SHARE = 0.42;
@@ -131,6 +130,8 @@ function lookup(root: HTMLElement) {
     sim: query(root, '#sim', HTMLElement),
     scene: query(root, '#scene', HTMLCanvasElement),
     sceneWrap: query(root, '#scene-wrap', HTMLDivElement),
+    lesson: query(root, '.lesson', HTMLDivElement),
+    transport: query(root, '.transport', HTMLDivElement),
     graph: query(root, '#graph', HTMLCanvasElement),
     graphWrap: query(root, '#graph-wrap', HTMLDivElement),
     run: query(root, '#run', HTMLButtonElement),
@@ -433,10 +434,25 @@ export class MomentumLesson {
     );
   }
 
+  /**
+   * The tallest the road can be (px) with everything from the top of the page down to the road's
+   * buttons, and the page footer, on one screen. On a laptop the sliders sit beside the road, so
+   * they fit too.
+   */
+  private roomForRoad(): number {
+    const { sceneWrap, transport, lesson } = this.els;
+    const top = sceneWrap.getBoundingClientRect().top + window.scrollY;
+    // What the page shows under the lesson (the footer): stays the same whatever the road's height.
+    const pageBelow = document.documentElement.scrollHeight - (this.root.getBoundingClientRect().bottom + window.scrollY);
+    const lessonBelow = Number.parseFloat(getComputedStyle(lesson).paddingBottom) || 0;
+    const cardBorder = 2;
+    return window.innerHeight - top - transport.offsetHeight - cardBorder - lessonBelow - Math.max(0, pageBelow);
+  }
+
   private renderScene(snaps: Record<TruckId, Snapshot>): void {
     const width = this.els.sceneWrap.clientWidth;
     // Tall enough to show the trucks at their natural size, short enough that the road and its buttons fit the window.
-    const maxHeight = Math.max(MIN_SCENE_HEIGHT, window.innerHeight * SCENE_SHARE);
+    const maxHeight = Math.max(MIN_SCENE_HEIGHT, this.roomForRoad());
     const height = Math.round(clamp(naturalSceneHeight(width), MIN_SCENE_HEIGHT, maxHeight));
     const ctx = fitCanvas(this.els.scene, width, height);
     this.els.scene.dataset['state'] = this.state;

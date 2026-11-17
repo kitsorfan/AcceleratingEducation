@@ -162,6 +162,28 @@ test('fast forward plays faster, and normal speed is always one click (or F) awa
   await expect(normal).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('fits a 15.6-inch laptop screen: road, buttons and panel without scrolling', async ({ page }) => {
+  const overflow = () => page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+  await page.clock.install(); // so the challenge can be played to the end without waiting
+  await page.setViewportSize({ width: 1536, height: 720 }); // Full HD at 125%, minus the browser's bars
+  await page.goto('./');
+  for (const n of [1, 4]) {
+    await step(page, n).click();
+    await expect(page.locator('#sim')).toBeInViewport({ ratio: 1 });
+    await expect(panel(page, n)).toBeInViewport({ ratio: 1 });
+    await expect.poll(overflow).toBe(0);
+  }
+
+  // The longest result: a wrong guess, explained in Greek, still fits under the answers.
+  await page.getByRole('button', { name: 'ΕΛ' }).click();
+  await page.locator('[data-predict="a"]').click();
+  await page.locator('#run').click();
+  await page.clock.runFor(10_000);
+  await expect(page.locator('#result')).toHaveAttribute('data-verdict', 'wrong');
+  await expect(panel(page, 4)).toBeInViewport({ ratio: 1 });
+  await expect.poll(overflow).toBe(0);
+});
+
 test('without friction the calculations say the momentum cannot change', async ({ page }) => {
   await page.goto('./');
   await setSlider(page.locator('#friction'), 0);
