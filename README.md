@@ -23,7 +23,7 @@ A stepper at the top (**Simulation · Graph · Calculations · Challenge**) move
 
 Why "same force" is the default: if friction were μ·m·g, the heavier truck would also feel a proportionally bigger force, and both trucks would stop at the same spot. That would hide the momentum difference, so the main experiment applies the same friction force to both trucks, and the μ·m·g case becomes the challenge.
 
-Long runs (very low friction) play faster, so a run never takes much more than 20 seconds. The clock shows the speed-up, e.g. "(×3)". On a keyboard, Space runs or pauses, R resets and, on the challenge, N deals a new problem.
+Long runs (very low friction) play faster, so a run never takes much more than 20 seconds. The **×1 | ×4** switch next to Reset turns fast forward on (four times faster, on top of that) and back to normal speed; it stays as set across runs. The clock shows the speed-up, e.g. "(×3)". On a keyboard, Space runs or pauses, R resets, F toggles fast forward and, on the challenge, N deals a new problem.
 
 The Greek version follows the school textbook conventions: υ for velocity, T for friction, α for acceleration, Α / Β for the trucks, and decimal commas.
 

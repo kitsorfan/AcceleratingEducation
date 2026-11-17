@@ -5,6 +5,7 @@ const ICONS = /* html */ `
 <svg class="sprite" aria-hidden="true" focusable="false">
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/><rect x="14" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-forward" viewBox="0 0 24 24"><path d="M2.5 6v12l9-6z" fill="currentColor" stroke="none"/><path d="M12.5 6v12l9-6z" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
   <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.97a4 4 0 0 0 3.3-1.7l5.46-8.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.97a4 4 0 0 1 3.43 1.94l.48.74"/><path d="M22 18h-6.04a4 4 0 0 1-3.3-1.8l-.36-.45"/></symbol>
 </svg>`;
@@ -63,6 +64,10 @@ ${ICONS}
     <div class="transport">
       <button type="button" class="btn btn-primary btn-run" id="run">${icon('play', 'run-icon')}<span id="run-label"></span></button>
       <button type="button" class="btn btn-outline" id="reset">${icon('reset')}<span data-i18n="reset"></span></button>
+      <div class="speed-switch" role="group" data-i18n-label="playbackSpeed">
+        <button type="button" data-fast="false" aria-pressed="true">${icon('play')}<span>×1</span></button>
+        <button type="button" data-fast="true" aria-pressed="false">${icon('forward')}<span id="fast-label"></span></button>
+      </div>
       <button type="button" class="btn btn-outline" id="new-problem" hidden>${icon('shuffle')}<span data-i18n="newProblem"></span></button>
       <output class="clock" id="clock"></output>
     </div>

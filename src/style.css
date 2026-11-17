@@ -684,6 +684,52 @@ body {
   opacity: 0.9;
 }
 
+/* Playback speed: normal (×1) or fast forward (×4), both always in view. */
+.speed-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.speed-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.speed-switch button:hover {
+  color: var(--text);
+}
+
+.speed-switch .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.speed-switch button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 /* ---- Simulation --------------------------------------------------------------------------- */
 
 .sim {

@@ -45,6 +45,8 @@ const TRUCK_IDS: readonly TruckId[] = ['a', 'b'];
 const MAX_FRAME_STEP = 0.1;
 /** Runs longer than this (s) play faster, so a class never waits much longer than this. */
 const MAX_RUN_SECONDS = 20;
+/** How much faster the fast-forward button plays, on top of the automatic speed-up. */
+export const FAST_FORWARD = 4;
 /** Canvas heights (px): the road never gets shorter than this, nor taller than this share of the window. */
 const MIN_SCENE_HEIGHT = 220;
 const SCENE_SHARE = 0.6;
@@ -69,9 +71,9 @@ const newtons = (value: number): string => `${num(value)} N`;
 /** A symbol with the truck's letter as subscript, e.g. p_A, as safe HTML. */
 const symbol = (letter: string, id: TruckId): string => `<i>${letter}</i><sub>${escapeHtml(sub(id))}</sub>`;
 
-/** How much faster than real time a run of this length plays (1 = real time). */
-export function playbackSpeed(duration: number): number {
-  return Math.max(1, Math.ceil(duration / MAX_RUN_SECONDS));
+/** How much faster than real time a run of this length plays (1 = real time), with or without fast forward. */
+export function playbackSpeed(duration: number, fast = false): number {
+  return Math.max(1, Math.ceil(duration / MAX_RUN_SECONDS)) * (fast ? FAST_FORWARD : 1);
 }
 
 /** Reads the step from a URL hash like "#step-3". */
@@ -133,6 +135,8 @@ function lookup(root: HTMLElement) {
     runLabel: query(root, '#run-label', HTMLSpanElement),
     runIcon: query(root, '#run-icon', SVGUseElement),
     reset: query(root, '#reset', HTMLButtonElement),
+    speedButtons: queryAll(root, '[data-fast]', HTMLButtonElement),
+    fastLabel: query(root, '#fast-label', HTMLSpanElement),
     newProblem: query(root, '#new-problem', HTMLButtonElement),
     clock: query(root, '#clock', HTMLOutputElement),
     speed: query(root, '#speed', HTMLInputElement),
@@ -162,6 +166,8 @@ export class MomentumLesson {
   private state: RunState = 'ready';
   /** Simulated time since the start (s). */
   private time = 0;
+  /** Fast forward stays on across runs and resets until normal speed is chosen again. */
+  private fast = false;
   private prediction: Prediction | null = null;
   private lastFrame: number | null = null;
   private frameRequested = false;
@@ -201,6 +207,9 @@ export class MomentumLesson {
 
     els.run.addEventListener('click', () => this.toggleRun());
     els.reset.addEventListener('click', () => this.reset());
+    for (const button of els.speedButtons) {
+      button.addEventListener('click', () => this.setFast(button.dataset['fast'] === 'true'));
+    }
     els.newProblem.addEventListener('click', () => this.newProblem());
     for (const tab of els.tabs) tab.addEventListener('click', () => this.goTo(stepFromHash(`#step-${tab.dataset['step']}`)));
     for (const button of els.predictions) {
@@ -237,6 +246,8 @@ export class MomentumLesson {
       this.toggleRun();
     } else if (event.code === 'KeyR') {
       this.reset();
+    } else if (event.code === 'KeyF') {
+      this.setFast(!this.fast);
     } else if (event.code === 'KeyN') {
       this.newProblem();
     }
@@ -285,6 +296,12 @@ export class MomentumLesson {
     this.invalidate();
   }
 
+  /** Fast forward or normal speed, from now on: a run in progress keeps going. */
+  private setFast(fast: boolean): void {
+    this.fast = fast;
+    this.invalidate();
+  }
+
   private finish(): void {
     this.time = runDuration(this.plan);
     this.state = 'finished';
@@ -320,7 +337,7 @@ export class MomentumLesson {
     if (this.state === 'running') {
       const duration = runDuration(this.plan);
       if (this.lastFrame !== null) {
-        const step = Math.min((now - this.lastFrame) / 1000, MAX_FRAME_STEP) * playbackSpeed(duration);
+        const step = Math.min((now - this.lastFrame) / 1000, MAX_FRAME_STEP) * playbackSpeed(duration, this.fast);
         this.time = Math.min(this.time + step, duration);
       }
       this.lastFrame = now;
@@ -378,7 +395,14 @@ export class MomentumLesson {
     const icon = state === 'running' ? '#i-pause' : '#i-play';
     if (els.runIcon.getAttribute('href') !== icon) els.runIcon.setAttribute('href', icon);
     els.run.dataset['state'] = state;
-    const speed = playbackSpeed(runDuration(this.plan));
+    setText(els.fastLabel, `×${FAST_FORWARD}`);
+    for (const button of els.speedButtons) {
+      const fast = button.dataset['fast'] === 'true';
+      button.setAttribute('aria-pressed', String(fast === this.fast));
+      const label = fast ? t('fastForward', { k: FAST_FORWARD }) : t('normalSpeed');
+      if (button.getAttribute('aria-label') !== label) button.setAttribute('aria-label', label);
+    }
+    const speed = playbackSpeed(runDuration(this.plan), this.fast);
     const time = num(this.time, 1);
     setText(els.clock, speed > 1 ? t('clockFast', { t: time, k: speed }) : t('clock', { t: time }));
   }

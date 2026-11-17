@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { playbackSpeed, stepFromHash, trace } from './lesson';
+import { FAST_FORWARD, playbackSpeed, stepFromHash, trace } from './lesson';
 import { planMotion } from './physics';
 import { crateCount, followCamera, frameRoad, shade } from './scene';
 
@@ -84,6 +84,11 @@ describe('playbackSpeed', () => {
     expect(playbackSpeed(15)).toBe(1);
     expect(playbackSpeed(20)).toBe(1);
     expect(playbackSpeed(45)).toBe(3);
+  });
+
+  it('multiplies the speed-up by the fast-forward factor', () => {
+    expect(playbackSpeed(15, true)).toBe(FAST_FORWARD);
+    expect(playbackSpeed(45, true)).toBe(3 * FAST_FORWARD);
   });
 });
 

@@ -110,6 +110,34 @@ test('pauses with the button and Space, and resets with R', async ({ page }) => 
   await expect(page.locator('#clock')).toHaveText('t = 0.0 s');
 });
 
+test('fast forward plays faster, and normal speed is always one click (or F) away', async ({ page }) => {
+  await page.goto('./');
+  const normal = page.getByRole('button', { name: 'Normal speed ×1' });
+  const fast = page.getByRole('button', { name: 'Fast forward ×4' });
+  const clock = page.locator('#clock');
+  await expect(normal).toHaveAttribute('aria-pressed', 'true');
+  await expect(fast).toHaveAttribute('aria-pressed', 'false');
+
+  await fast.click();
+  await expect(fast).toHaveAttribute('aria-pressed', 'true');
+  await expect(normal).toHaveAttribute('aria-pressed', 'false');
+  await expect(clock).toHaveText('t = 0.0 s (×4)');
+  // The default run lasts 15 s (truck B): under 4 s at ×4, so it cannot finish in time at normal speed.
+  await page.locator('#run').click();
+  await expect(scene(page)).toHaveAttribute('data-state', 'finished', { timeout: 6000 });
+
+  await normal.click();
+  await expect(normal).toHaveAttribute('aria-pressed', 'true');
+  await expect(fast).toHaveAttribute('aria-pressed', 'false');
+  await expect(clock).not.toContainText('×');
+
+  await page.locator('h1').click();
+  await page.keyboard.press('KeyF');
+  await expect(fast).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('KeyF');
+  await expect(normal).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('without friction the calculations say the momentum cannot change', async ({ page }) => {
   await page.goto('./');
   await setSlider(page.locator('#friction'), 0);
