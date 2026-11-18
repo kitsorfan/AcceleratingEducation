@@ -30,7 +30,7 @@ import {
 import { onThemeChange } from '../../theme';
 import { drawScene, naturalSceneHeight, type SceneTruck } from './scene';
 import { STRINGS, type MomentumKey } from './strings';
-import { TEMPLATE } from './template';
+import { TEMPLATE, frac } from './template';
 
 export type RunState = 'ready' | 'running' | 'paused' | 'finished';
 export type Step = 1 | 2 | 3 | 4;
@@ -560,7 +560,7 @@ export class MomentumLesson {
         calcT.hidden = false;
         setHtml(
           calcT,
-          `Δ${symbol('t', id)} = ${escapeHtml(num(motion.p0))} / ${escapeHtml(num(setup.frictionForce))} = ` +
+          `Δ${symbol('t', id)} = ${frac(escapeHtml(num(motion.p0)), escapeHtml(num(setup.frictionForce)))} = ` +
             `<strong>${escapeHtml(seconds(motion.stopTime))}</strong>`,
         );
       }

@@ -10,6 +10,13 @@ const ICONS = /* html */ `
   <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.97a4 4 0 0 0 3.3-1.7l5.46-8.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.97a4 4 0 0 1 3.43 1.94l.48.74"/><path d="M22 18h-6.04a4 4 0 0 1-3.3-1.8l-.36-.45"/></symbol>
 </svg>`;
 
+/**
+ * A fraction written as on the whiteboard: the numerator over a bar, the denominator under it.
+ * Takes safe HTML. The hidden slash keeps it readable as "a / b" for screen readers and copy-paste.
+ */
+export const frac = (top: string, bottom: string): string =>
+  `<span class="frac"><span class="frac-top">${top}</span><span class="visually-hidden"> / </span><span class="frac-bottom">${bottom}</span></span>`;
+
 const icon = (name: string, id = ''): string =>
   `<svg class="icon" aria-hidden="true" focusable="false"><use ${id ? `id="${id}" ` : ''}href="#i-${name}"></use></svg>`;
 
@@ -130,7 +137,7 @@ ${slider('friction', 'friction', LIMITS.force, 'field-wide', 'frictionNote')}
       </div>
       <div class="card">
         <h2 data-i18n="theoryImpulse"></h2>
-        <p class="law">F · Δt = Δp &nbsp;⇒&nbsp; Δt = p / F</p>
+        <p class="law">F · Δt = Δp &nbsp;⇒&nbsp; Δt = ${frac('Δp', 'F')}</p>
         <p class="calc calc-a" id="calc-ta"></p>
         <p class="calc calc-b" id="calc-tb"></p>
       </div>

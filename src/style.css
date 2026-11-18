@@ -1113,29 +1113,73 @@ input[type='range']:disabled {
   }
 }
 
+/* Each card sizes its formulas by its own width (cqi), so a wide card is filled, not left half empty. */
+.theory > .card {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+}
+
+.theory h2 {
+  font-size: 1.15rem;
+}
+
 .law {
-  margin: 0 0 14px;
-  padding: 16px;
+  margin: 0 0 16px;
+  padding: clamp(14px, 3cqi, 24px) 16px;
   border-radius: 14px;
   background: var(--accent-soft);
   font-family: var(--math);
-  font-size: clamp(1.3rem, 3vw, 1.7rem);
+  font-size: clamp(1.35rem, 4.2cqi, 2.2rem);
   font-style: italic;
   text-align: center;
 }
 
 .calc {
-  margin: 8px 0 0;
-  padding: 4px 0 4px 12px;
-  border-left: 3px solid var(--truck-a);
+  margin: 10px 0 0;
+  padding: clamp(8px, 1.6cqi, 14px) 16px;
+  border-left: 4px solid var(--truck-a-line);
+  border-radius: 6px 12px 12px 6px;
+  background: var(--truck-a-soft);
   font-family: var(--math);
-  font-size: 1.1rem;
+  font-size: clamp(1.1rem, 3cqi, 1.6rem);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
+/* The result in the truck's colour, never split from its unit. */
+.calc strong {
+  color: var(--truck-a-ink);
+  white-space: nowrap;
+}
+
+/* A fraction as on the whiteboard: numerator over a bar over denominator, the bar level with the "=". */
+.frac {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+  margin: 0 0.15em;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.frac-top {
+  padding: 0 0.3em 0.08em;
+  border-bottom: max(1.5px, 0.06em) solid currentColor;
+}
+
+.frac-bottom {
+  padding: 0.08em 0.3em 0;
+}
+
 .calc-b {
-  border-left-color: var(--truck-b);
+  border-left-color: var(--truck-b-line);
+  background: var(--truck-b-soft);
+}
+
+.calc-b strong {
+  color: var(--truck-b-ink);
 }
 
 /* ---- Challenge step ----------------------------------------------------------------------- */

@@ -16,7 +16,7 @@ A stepper at the top (**Simulation · Graph · Calculations · Challenge**) move
 
 1. **Simulation:** the two trucks and five sliders: the mass (5,000 to 40,000 kg) and initial speed (0 to 30 m/s) of each truck, and the friction force (0 to 50,000 N, the same on both trucks). The crates grow with the cargo, and each truck's momentum arrow is drawn to scale.
 2. **Graph:** the same road, plus a table (m, v, p, distance, time to stop), the p–t graph, and the comparison as formulas, e.g. `pB = 5 × pA`, `tB = 5 × tA`, `xB = 5 × xA`.
-3. **Calculations:** p = m·v and F·Δt = Δp ⇒ Δt = p / F, worked out with the numbers from the simulation.
+3. **Calculations:** p = m·v and F·Δt = Δp ⇒ Δt = Δp / F, worked out with the numbers from the simulation.
 4. **Challenge:** the same road, where friction is μ·m·g. Students predict which truck needs more road, then run it. With the trucks from the simulation at the same speed (the default), both stop together, because a = μ·g for both. **New problem** deals new trucks with different masses and speeds, so the answer can be either truck or the same distance: only the speed decides it (x = v² / 2μg).
 
 The page uses the whole screen. On a laptop (e.g. 15.6", Full HD at 125%) the sliders and the challenge's answers sit beside the road, so the road, its buttons and the panel fit without scrolling. Taller screens keep the panel under the road, and phones stack everything.
