@@ -138,6 +138,13 @@ export function runDuration(plan: Plan): number {
   return Number.isFinite(end) ? end : FRICTIONLESS_RUN_TIME;
 }
 
+/** Which truck has the larger value, or `same` when they match (up to rounding). */
+export function larger(valueA: number, valueB: number): 'a' | 'b' | 'same' {
+  const tolerance = 1e-9 * Math.max(Math.abs(valueA), Math.abs(valueB));
+  if (Math.abs(valueA - valueB) <= tolerance) return 'same';
+  return valueA > valueB ? 'a' : 'b';
+}
+
 /** The answer to "which truck needs more distance to stop?". */
 export type Outcome = 'a' | 'b' | 'same' | 'never-stop' | 'at-rest';
 
@@ -145,9 +152,7 @@ export function outcomeOf(plan: Plan): Outcome {
   const { a, b } = plan;
   if (a.v0 === 0 && b.v0 === 0) return 'at-rest';
   if (!Number.isFinite(a.stopDistance) || !Number.isFinite(b.stopDistance)) return 'never-stop';
-  const tolerance = 1e-9 * Math.max(a.stopDistance, b.stopDistance);
-  if (Math.abs(a.stopDistance - b.stopDistance) <= tolerance) return 'same';
-  return a.stopDistance > b.stopDistance ? 'a' : 'b';
+  return larger(a.stopDistance, b.stopDistance);
 }
 
 export const MS_TO_KMH = 3.6;

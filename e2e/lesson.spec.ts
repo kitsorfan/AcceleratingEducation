@@ -182,6 +182,21 @@ test('fits a 15.6-inch laptop screen: road, buttons and panel without scrolling'
   await expect(page.locator('#result')).toHaveAttribute('data-verdict', 'wrong');
   await expect(panel(page, 4)).toBeInViewport({ ratio: 1 });
   await expect.poll(overflow).toBe(0);
+
+  // Every other question, with its result, fits too.
+  const seen = new Set<string>();
+  for (let i = 0; i < 40 && seen.size < 4; i++) {
+    await page.getByRole('button', { name: 'Νέο πρόβλημα' }).click();
+    await expect(scene(page)).toHaveAttribute('data-state', 'ready'); // the new problem is on screen
+    seen.add((await page.locator('#question').textContent()) ?? '');
+    await page.locator('[data-predict="a"]').click();
+    await page.locator('#run').click();
+    await page.clock.runFor(10_000);
+    await expect(scene(page)).toHaveAttribute('data-state', 'finished');
+    await expect(panel(page, 4)).toBeInViewport({ ratio: 1 });
+    await expect.poll(overflow).toBe(0);
+  }
+  expect(seen.size).toBe(4);
 });
 
 test('without friction the calculations say the momentum cannot change', async ({ page }) => {
@@ -231,14 +246,60 @@ test('challenge: New problem deals another challenge, from the start line', asyn
   await page.locator('#run').click();
   await page.clock.runFor(10_000); // every random run is over in under 10 s
   await expect(scene(page)).toHaveAttribute('data-state', 'finished');
-  await expect(page.locator('#verdict')).toHaveText(/^Answer: (Truck A|Truck B|Same distance)\.$/);
-  await expect(page.locator('#explain')).toContainText('μ·g =');
+  await expect(page.locator('#verdict')).toHaveText(/^Answer: (Truck A|Truck B|Same (distance|time|momentum|friction))\.$/);
+  await expect(page.locator('#explain')).not.toBeEmpty();
 
   // Moving a slider brings back the trucks from the simulation.
   await step(page, 1).click();
   await setSlider(page.locator('#speed-a'), 5);
   await step(page, 4).click();
   await expect(page.locator('#step-lede')).toHaveText('f = μ·m·g (μ = 0.30)');
+  expect(problems).toEqual([]);
+});
+
+/** The challenge questions, the third answer each one offers, and a formula its explanation uses (no-break spaces: \s). */
+const QUESTIONS = [
+  { question: 'Which truck needs more distance to stop?', same: 'Same distance', why: /a\s=\sμ·g\s=/ },
+  { question: 'Which truck takes longer to stop?', same: 'Same time', why: /a\s=\sμ·g\s=|Δt\s=\sp\s\/\sf/ },
+  {
+    question: 'Which truck has more momentum at the start?',
+    same: 'Same momentum',
+    why: /^p\s=\sm·v\. Truck A: [\d,]+ kg × \d+ m\/s = [\d,]+ kg·m\/s\. Truck B: [\d,]+ kg × \d+ m\/s = [\d,]+ kg·m\/s\.$/,
+  },
+  { question: 'Which truck has the larger friction force?', same: 'Same friction', why: /f\s=\sμ·m·g/ },
+] as const;
+
+test('challenge: each new problem asks another question, with its own answers and explanation', async ({ page }) => {
+  const problems = watchForProblems(page);
+  await page.clock.install(); // so each run can be played to the end without waiting for it
+  await page.goto('./#step-4');
+  const question = page.locator('#question');
+  await expect(question).toHaveText(QUESTIONS[0].question);
+  await expect(page.getByRole('group', { name: QUESTIONS[0].question })).toBeVisible();
+  await expect(page.locator('#choice-same')).toHaveText('Same distance');
+
+  // New problem never asks the same question twice in a row; keep going until all four have come up.
+  const seen = new Set<string>();
+  let previous: string = QUESTIONS[0].question;
+  for (let i = 0; i < 40 && seen.size < QUESTIONS.length; i++) {
+    await page.getByRole('button', { name: 'New problem' }).click();
+    await expect(question).not.toHaveText(previous);
+    previous = (await question.textContent()) ?? '';
+    const asked = QUESTIONS.find((q) => q.question === previous);
+    expect(asked, `unknown question "${previous}"`).toBeDefined();
+    if (!asked) break;
+    seen.add(asked.question);
+    await expect(page.getByRole('group', { name: asked.question })).toBeVisible();
+    await expect(page.locator('#choice-same')).toHaveText(asked.same);
+
+    await page.locator('[data-predict="same"]').click();
+    await page.locator('#run').click();
+    await page.clock.runFor(10_000);
+    await expect(scene(page)).toHaveAttribute('data-state', 'finished');
+    await expect(page.locator('#verdict')).toHaveText(/^(✓ Correct!|✗ Not quite\. Answer: Truck [AB]\.)$/);
+    await expect(page.locator('#explain')).toHaveText(asked.why);
+  }
+  expect([...seen].toSorted()).toEqual(QUESTIONS.map((q) => q.question).toSorted());
   expect(problems).toEqual([]);
 });
 

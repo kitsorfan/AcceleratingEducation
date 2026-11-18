@@ -17,7 +17,16 @@ A stepper at the top (**Simulation · Graph · Calculations · Challenge**) move
 1. **Simulation:** the two trucks and five sliders: the mass (5,000 to 40,000 kg) and initial speed (0 to 30 m/s) of each truck, and the friction force (0 to 50,000 N, the same on both trucks). The crates grow with the cargo, and each truck's momentum arrow is drawn to scale.
 2. **Graph:** the same road, plus a table (m, v, p, distance, time to stop), the p–t graph, and the comparison as formulas, e.g. `pB = 5 × pA`, `tB = 5 × tA`, `xB = 5 × xA`.
 3. **Calculations:** p = m·v and F·Δt = Δp ⇒ Δt = Δp / F, worked out with the numbers from the simulation.
-4. **Challenge:** the same road, where friction is μ·m·g. Students predict which truck needs more road, then run it. With the trucks from the simulation at the same speed (the default), both stop together, because a = μ·g for both. **New problem** deals new trucks with different masses and speeds, so the answer can be either truck or the same distance: only the speed decides it (x = v² / 2μg).
+4. **Challenge:** the same road, where friction is μ·m·g. Students answer a question about the two trucks (truck A, truck B or "the same"), then run it to check. The first question uses the trucks from the simulation: which truck needs more distance to stop? At the same speed (the default) both stop together, because a = μ·g for both. **New problem** deals new trucks and a different question each time, picked at random from four:
+
+   | Question | What decides it | The trap |
+   | --- | --- | --- |
+   | Which truck needs more distance to stop? | only the speed: x = v² / 2μg | the heavier truck, or the one with more momentum |
+   | Which truck takes longer to stop? | only the speed: t = v / μg | the heavier truck, or the one with more momentum |
+   | Which truck has more momentum at the start? | p = m·v | the faster truck, or the heavier one: sometimes neither has more |
+   | Which truck has the larger friction force? | only the mass: f = μ·m·g | the faster truck, or the one with more momentum |
+
+   The trucks are dealt so that each answer (A, B, the same) comes up about as often. On the momentum question, the arrows stay hidden until the run starts. On the time question, each truck shows when it stopped instead of where.
 
 The page uses the whole screen. On a laptop (e.g. 15.6", Full HD at 125%) the sliders and the challenge's answers sit beside the road, so the road, its buttons and the panel fit without scrolling. Taller screens keep the panel under the road, and phones stack everything.
 
@@ -61,8 +70,8 @@ The end-to-end tests use Playwright's Chromium. Install it once with `npx playwr
 
 ### Testing
 
-- **Unit tests** (`src/**/*.test.ts`) cover the physics: p = m·v, the impulse-momentum theorem, stopping times and distances with the same force and on the same road, trucks at different speeds, no friction, and trucks at rest. They also cover the camera, the graph line, playback speed-up and fast forward, step links, number formatting per language, language detection, and the theme choice (with a check that the CSS's two dark colour lists match). Another test keeps the English and Greek text in sync: same keys, same `{placeholders}`, and every key used in the markup defined.
-- **End-to-end tests** (`e2e/`) build the site and use it in a real browser. They check that it loads cleanly with no third-party requests and ships a strict CSP. They also test the four steps and the stepper, a run that continues across steps, pause and reset, fast forward, each truck's own speed, no friction, the challenge, and Greek. On a 15.6" laptop screen they check that the simulation and the challenge fit without scrolling, even with the longest result shown. On a phone, they check that every step fits the screen and that the stepper stays in reach.
+- **Unit tests** (`src/**/*.test.ts`) cover the physics: p = m·v, the impulse-momentum theorem, stopping times and distances with the same force and on the same road, trucks at different speeds, no friction, and trucks at rest. They check the answer to each challenge question, and that New problem always asks a different question, gives each answer about as often and sets a trap. They also cover the camera, the graph line, playback speed-up and fast forward, step links, number formatting per language, language detection, and the theme choice (with a check that the CSS's two dark colour lists match). Another test keeps the English and Greek text in sync: same keys, same `{placeholders}`, and every key used in the markup defined.
+- **End-to-end tests** (`e2e/`) build the site and use it in a real browser. They check that it loads cleanly with no third-party requests and ships a strict CSP. They also test the four steps and the stepper, a run that continues across steps, pause and reset, fast forward, each truck's own speed, no friction, the challenge and its four questions, and Greek. On a 15.6" laptop screen they check that the simulation and the challenge fit without scrolling, even with the longest result shown, for every question. On a phone, they check that every step fits the screen and that the stepper stays in reach.
 
 ### Project structure
 
@@ -77,6 +86,7 @@ src/
   lessons/momentum/
     physics.ts             exact motion of two braking trucks (no step-by-step integration)
     lesson.ts              steps, run state, sliders, readouts, calculations, challenge
+    challenge.ts           the challenge's questions, their answers, and random new problems
     scene.ts               canvas drawing: roads, trucks, momentum arrows, ruler, camera
     graph.ts               p–t graph
     strings.ts             all lesson text in English and Greek

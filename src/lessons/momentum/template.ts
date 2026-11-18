@@ -146,11 +146,11 @@ ${slider('friction', 'friction', LIMITS.force, 'field-wide', 'frictionNote')}
 
   <section class="step-panel" data-panel="4">
     <div class="card predict">
-      <p class="question" data-i18n="challengeQuestion"></p>
-      <div class="choices" role="group" data-i18n-label="challengeQuestion">
+      <p class="question" id="question"></p>
+      <div class="choices" role="group" aria-labelledby="question">
         <button type="button" class="choice choice-a" data-predict="a" aria-pressed="false" data-i18n="truckA"></button>
         <button type="button" class="choice choice-b" data-predict="b" aria-pressed="false" data-i18n="truckB"></button>
-        <button type="button" class="choice choice-same" data-predict="same" aria-pressed="false" data-i18n="predictSame"></button>
+        <button type="button" class="choice choice-same" id="choice-same" data-predict="same" aria-pressed="false"></button>
       </div>
       <p class="hint" id="predict-hint" data-i18n="predictHint"></p>
       <div class="result" id="result" aria-live="polite">

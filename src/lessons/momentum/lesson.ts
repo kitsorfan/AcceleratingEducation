@@ -4,7 +4,8 @@
  * 1. Simulation: two trucks, five sliders (each truck's mass and speed, the shared friction), Run.
  * 2. Graph: the same road, plus the p–t graph and a table.
  * 3. Calculations: p = m·v and F·Δt = Δp, with the numbers from the simulation.
- * 4. Challenge: on the same road friction is μ·m·g; predict, then run. New problem deals another one.
+ * 4. Challenge: on the same road friction is μ·m·g; predict, then run. New problem deals another one,
+ *    with another question: more distance, more time to stop, more momentum or more friction.
  *
  * A stepper at the top lets the teacher jump between the steps at any time.
  *
@@ -12,12 +13,11 @@
  */
 import { escapeHtml, formatNumber, onLangChange, translate, translateDom, type Params } from '../../i18n/i18n';
 import { clamp, niceCeil, ratioDigits } from '../../lib/nice';
-import { challengeFromSetup, planChallenge, randomChallenge, type Challenge } from './challenge';
+import { answerOf, challengeFromSetup, planChallenge, randomChallenge, type Challenge, type Question } from './challenge';
 import { drawGraph, type GraphSeries, type GraphTheme } from './graph';
 import {
   DEFAULT_SETUP,
   MS_TO_KMH,
-  outcomeOf,
   planBoth,
   runDuration,
   snapshotAt,
@@ -56,6 +56,20 @@ const GRAPH_SHARE = 0.42;
 const COLORS: Record<TruckId, { color: string; ink: string }> = {
   a: { color: '#2563eb', ink: '#1d4ed8' },
   b: { color: '#f97316', ink: '#c2410c' },
+};
+
+/** Each challenge question, and its third answer ("the same …"). */
+const QUESTION_TEXT: Record<Question, MomentumKey> = {
+  distance: 'questionDistance',
+  time: 'questionTime',
+  momentum: 'questionMomentum',
+  friction: 'questionFriction',
+};
+const SAME_TEXT: Record<Question, MomentumKey> = {
+  distance: 'sameDistance',
+  time: 'sameTime',
+  momentum: 'sameMomentum',
+  friction: 'sameFriction',
 };
 
 const t = (key: MomentumKey, params?: Params): string => translate(STRINGS, key, params);
@@ -146,7 +160,9 @@ function lookup(root: HTMLElement) {
     frictionOut: query(root, '#friction-out', HTMLOutputElement),
     ratios: query(root, '#ratios', HTMLDivElement),
     lawMomentum: query(root, '#law-momentum', HTMLParagraphElement),
+    question: query(root, '#question', HTMLParagraphElement),
     predictions: queryAll(root, '[data-predict]', HTMLButtonElement),
+    predictSame: query(root, '#choice-same', HTMLButtonElement),
     predictHint: query(root, '#predict-hint', HTMLParagraphElement),
     result: query(root, '#result', HTMLDivElement),
     verdict: query(root, '#verdict', HTMLParagraphElement),
@@ -458,6 +474,9 @@ export class MomentumLesson {
     this.els.scene.dataset['state'] = this.state;
     if (!ctx) return;
     const ran = this.state !== 'ready';
+    const question = this.step === CHALLENGE ? this.challenge().question : null;
+    // Asked which truck has more momentum, the class predicts from m and v: the arrows show it once the run starts.
+    const hideMomentum = question === 'momentum' && !ran;
     const truck = (id: TruckId): SceneTruck => {
       const snap = snaps[id];
       const motion = this.plan[id];
@@ -470,9 +489,10 @@ export class MomentumLesson {
         x: snap.x,
         p: snap.p,
         title: title.join(' · '),
-        momentum: t('momentumLabel', { p: num(snap.p) }),
+        momentum: hideMomentum ? null : t('momentumLabel', { p: num(snap.p) }),
         letter: sub(id),
-        stopLabel: ran && snap.stopped ? meters(snap.x) : null,
+        // Asked which truck takes longer, each truck shows when it stopped rather than where.
+        stopLabel: ran && snap.stopped ? (question === 'time' ? seconds(motion.stopTime) : meters(snap.x)) : null,
       };
     };
     drawScene(ctx, width, height, { trucks: [truck('a'), truck('b')], startLabel: t('startLabel'), meters });
@@ -569,6 +589,9 @@ export class MomentumLesson {
 
   private renderChallenge(): void {
     const { els, state, prediction } = this;
+    const { question } = this.challenge();
+    setText(els.question, t(QUESTION_TEXT[question]));
+    setText(els.predictSame, t(SAME_TEXT[question]));
     for (const button of els.predictions) {
       button.setAttribute('aria-pressed', String(button.dataset['predict'] === prediction));
       button.disabled = state !== 'ready';
@@ -576,7 +599,7 @@ export class MomentumLesson {
     els.predictHint.hidden = state !== 'ready';
     els.result.hidden = state !== 'finished';
     if (state !== 'finished') return;
-    const result = this.result(outcomeOf(this.plan));
+    const result = this.result(question, answerOf(question, this.plan));
     els.result.dataset['verdict'] = result.mood;
     setText(els.verdict, result.verdict);
     els.verdict.hidden = result.verdict === '';
@@ -584,12 +607,15 @@ export class MomentumLesson {
   }
 
   /** The verdict on the prediction, and one line on why. */
-  private result(outcome: Outcome): { mood: 'right' | 'wrong' | 'neutral'; verdict: string; explain: string } {
-    const { plan, prediction } = this;
+  private result(
+    question: Question,
+    outcome: Outcome,
+  ): { mood: 'right' | 'wrong' | 'neutral'; verdict: string; explain: string } {
+    const { prediction } = this;
     if (outcome === 'at-rest' || outcome === 'never-stop') {
       return { mood: 'neutral', verdict: '', explain: outcome === 'at-rest' ? t('explainAtRest') : '' };
     }
-    const answer = outcome === 'same' ? t('predictSame') : name(outcome);
+    const answer = outcome === 'same' ? t(SAME_TEXT[question]) : name(outcome);
     let mood: 'right' | 'wrong' | 'neutral' = 'neutral';
     let verdict = t('verdictNone', { answer });
     if (prediction === outcome) {
@@ -599,38 +625,59 @@ export class MomentumLesson {
       mood = 'wrong';
       verdict = t('verdictWrong', { answer });
     }
+    return { mood, verdict, explain: this.explain(question) };
+  }
 
+  /** One line on why, with the numbers of this challenge. */
+  private explain(question: Question): string {
+    const { plan } = this;
+    if (question === 'momentum') {
+      const calc = (motion: Motion): string =>
+        `${num(motion.mass)} kg × ${metersPerSecond(motion.v0)} = ${num(motion.p0)} kg·m/s`;
+      return t('explainMomentum', { nameA: name('a'), nameB: name('b'), calcA: calc(plan.a), calcB: calc(plan.b) });
+    }
+    if (question === 'friction') {
+      // f = μ·m·g: only the mass decides.
+      if (plan.a.mass === plan.b.mass) return t('explainFrictionSame', { f: newtons(plan.a.friction) });
+      const heavy: TruckId = plan.b.mass > plan.a.mass ? 'b' : 'a';
+      return t('explainFriction', {
+        heavy: name(heavy),
+        fHeavy: newtons(plan[heavy].friction),
+        fLight: newtons(plan[other(heavy)].friction),
+      });
+    }
+
+    // Distance or time to stop. Same road, so the same deceleration: only the speed decides.
+    const time = question === 'time';
     if (plan.a.v0 !== plan.b.v0) {
-      // Same road, so the same deceleration: only the speed decides.
       const fast: TruckId = plan.b.v0 > plan.a.v0 ? 'b' : 'a';
       const f = plan[fast];
       const s = plan[other(fast)];
-      const explain = t('explainSpeed', {
+      return t(time ? 'explainTimeSpeed' : 'explainDistanceSpeed', {
         fast: name(fast),
         vFast: metersPerSecond(f.v0),
         vSlow: metersPerSecond(s.v0),
         dFast: meters(round1(f.stopDistance)),
         dSlow: meters(round1(s.stopDistance)),
+        tFast: seconds(f.stopTime),
+        tSlow: seconds(s.stopTime),
         a: `${num(f.decel, 2)} m/s²`,
       });
-      return { mood, verdict, explain };
     }
-    if (plan.a.mass === plan.b.mass) {
-      return { mood, verdict, explain: t('explainSameMass', { d: meters(round1(plan.a.stopDistance)) }) };
-    }
+    if (plan.a.mass === plan.b.mass) return t('explainSameMass', { d: meters(round1(plan.a.stopDistance)) });
     const heavy: TruckId = plan.b.mass > plan.a.mass ? 'b' : 'a';
     const h = plan[heavy];
     const l = plan[other(heavy)];
     const ratio = h.p0 / l.p0;
-    const explain = t('explainMu', {
+    return t(time ? 'explainTimeMu' : 'explainDistanceMu', {
       heavy: name(heavy),
       ratio: num(ratio, ratioDigits(ratio)),
       fHeavy: newtons(h.friction),
       fLight: newtons(l.friction),
       a: `${num(h.decel, 2)} m/s²`,
       d: meters(round1(h.stopDistance)),
+      t: seconds(h.stopTime),
     });
-    return { mood, verdict, explain };
   }
 }
 

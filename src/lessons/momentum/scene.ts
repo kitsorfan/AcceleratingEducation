@@ -20,11 +20,14 @@ export interface SceneTruck {
   p: number;
   /** Strip header on the left, e.g. "Truck A · 5,000 kg" (in the challenge also "· 15 m/s"). */
   title: string;
-  /** Strip header on the right, e.g. "p = 75,000 kg·m/s". */
-  momentum: string;
+  /**
+   * Strip header on the right, e.g. "p = 75,000 kg·m/s". Null hides it and the momentum arrow:
+   * when the momentum is what the challenge asks about, the road doesn't show it before the run.
+   */
+  momentum: string | null;
   /** Letter painted on the cab door. */
   letter: string;
-  /** Where it stopped, e.g. "22.5 m", once it has stopped in this run; otherwise null. */
+  /** Where (or when) it stopped, e.g. "22.5 m" or "3.1 s", once it has stopped in this run; otherwise null. */
   stopLabel: string | null;
 }
 
@@ -162,16 +165,18 @@ function drawStrip(
   drawRuler(ctx, view, rulerTop, model.meters);
   drawTruck(ctx, sx(truck.x), groundY, scale, truck);
 
-  // Momentum arrow, from the middle of the truck, to a fixed scale.
-  const arrowY = groundY - (LOAD_TOP + ARROW_LIFT) * scale;
-  const arrowX = sx(truck.x - TRUCK_LENGTH / 2);
-  drawArrow(ctx, arrowX, arrowY, (truck.p / P_REF) * MAX_ARROW * width, truck.color);
-  ctx.font = `italic 700 14px ${FONT}`;
-  ctx.fillStyle = truck.ink;
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign = 'right';
-  ctx.fillText('p', arrowX - 6, arrowY + 5);
-  ctx.textAlign = 'left';
+  if (truck.momentum !== null) {
+    // Momentum arrow, from the middle of the truck, to a fixed scale.
+    const arrowY = groundY - (LOAD_TOP + ARROW_LIFT) * scale;
+    const arrowX = sx(truck.x - TRUCK_LENGTH / 2);
+    drawArrow(ctx, arrowX, arrowY, (truck.p / P_REF) * MAX_ARROW * width, truck.color);
+    ctx.font = `italic 700 14px ${FONT}`;
+    ctx.fillStyle = truck.ink;
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'right';
+    ctx.fillText('p', arrowX - 6, arrowY + 5);
+    ctx.textAlign = 'left';
+  }
 
   if (truck.stopLabel !== null) {
     const px = sx(truck.x);
@@ -195,7 +200,8 @@ function drawStrip(
   ctx.font = `600 13px ${FONT}`;
   const titleWidth = ctx.measureText(truck.title).width;
   ctx.font = `700 13px ${FONT}`;
-  const momentumWidth = ctx.measureText(truck.momentum).width;
+  const momentum = truck.momentum ?? '';
+  const momentumWidth = ctx.measureText(momentum).width;
   const size = clamp((13 * (width - 34)) / (titleWidth + momentumWidth), 9, 13);
   ctx.font = `600 ${size}px ${FONT}`;
   ctx.fillStyle = '#172033';
@@ -203,7 +209,7 @@ function drawStrip(
   ctx.textAlign = 'right';
   ctx.font = `700 ${size}px ${FONT}`;
   ctx.fillStyle = truck.ink;
-  ctx.fillText(truck.momentum, width - 10, top + HEADER / 2 + 0.5);
+  ctx.fillText(momentum, width - 10, top + HEADER / 2 + 0.5);
   ctx.textAlign = 'left';
 
 
